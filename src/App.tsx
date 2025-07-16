@@ -3,9 +3,9 @@ import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
 import { ServicesSection } from './components/ServicesSection';
 import { SpecialOfferSection } from './components/SpecialOfferSection';
-import { DatabaseSection } from './components/DatabaseSection';
+import DatabaseSection from './components/DatabaseSection'
 import { AdvantagesSection } from './components/AdvantagesSection';
-import { SocialProofSection } from './components/SocialProofSection';
+import SocialProofSection from './components/SocialProofSection'
 import { Footer } from './components/Footer';
 import { useTheme } from './hooks/useTheme';
 import { useLanguage } from './hooks/useLanguage';
