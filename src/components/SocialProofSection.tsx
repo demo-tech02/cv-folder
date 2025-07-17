@@ -67,7 +67,7 @@ const SocialProofSection: React.FC = () => {
     {
       name: "Ahmed Hassan",
       position: "Talent Acquisition Manager",
-      company: "Tech Corp",
+      company: "Tech",
       testimonial: "Finally found a service that understands the Saudi job market! The LinkedIn profiles they optimize consistently perform better in our searches.",
       imageUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face  ",
       linkedInUrl: "https://linkedin.com/in/ahmed-hassan"

@@ -16,16 +16,14 @@ const DatabaseSection: React.FC = () => {
             <h2 className="text-5xl font-bold text-gray-900 dark:text-white mb-12">
               Our Talent Database
             </h2>
-<div className="shadow-[0_2px_4px_0_rgba(0,0,0,0.05),0_-2px_4px_0_rgba(0,0,0,0.05)] rounded-xl py-7">
+<div className="shadow-[0_2px_4px_0_rgba(0,0,0,0.1),0_-2px_4px_0_rgba(0,0,0,0.1)] rounded-xl py-7 max-w-5xl mx-auto">
 
-            <div className='max-w-2xl mx-auto '>
-            <p className="text-xl text-gray-600 dark:text-gray-300 mb-4">
+            
+            <p className="text-xl  text-gray-600 dark:text-gray-300 mb-4 max-w-2xl mx-auto py-4">
               By purchasing any of our services, you will automatically be added to our{' '}
               <span className="font-semibold text-gray-900 dark:text-white">exclusive database</span>
               {' '}shared with HR professionals and companies.
             </p>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3  gap-8 max-w-3xl mx-auto">
             <div className="flex flex-col items-center">
               <div className="mb-4">

@@ -25,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-xl font-bold">CValue</span>
         </div>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-8">
           <button
             onClick={toggleLanguage}
             className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
