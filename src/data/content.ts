@@ -14,7 +14,7 @@ export const content: Record<'en' | 'ar', Content> = {
       items: [
         {
           title: "CV Enhancement",
-          description: "Transform your resume with AI-powered optimization aligned with Saudi hiring standards",
+          description: "Enhance your resume with AI, tailored to Saudi hiring standards",
           price: "299 SAR"
         },
         {
