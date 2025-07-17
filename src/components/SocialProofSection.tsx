@@ -61,7 +61,7 @@ const SocialProofSection: React.FC = () => {
       position: "HR Director",
       company: "ARAMCO",
       testimonial: "The quality of CVs we receive from this platform is exceptional. Clear formatting and ATS-friendly structure makes our screening process much more efficient.",
-      imageUrl: "/sarah-profile.jpg",
+      imageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
       linkedInUrl: "https://linkedin.com/in/sarah-al-mahmoud"
     },
     {
@@ -69,7 +69,7 @@ const SocialProofSection: React.FC = () => {
       position: "Talent Acquisition Manager",
       company: "Tech Corp",
       testimonial: "Finally found a service that understands the Saudi job market! The LinkedIn profiles they optimize consistently perform better in our searches.",
-      imageUrl: "/ahmed-profile.jpg",
+      imageUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face  ",
       linkedInUrl: "https://linkedin.com/in/ahmed-hassan"
     },
     {
@@ -77,9 +77,10 @@ const SocialProofSection: React.FC = () => {
       position: "Recruiter",
       company: "STC",
       testimonial: "I've been recommending this platform to all job seekers. The attention to detail and understanding of what employers look for is remarkable.",
-      imageUrl: "/fatima-profile.jpg",
+      imageUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
       linkedInUrl: "https://linkedin.com/in/fatima-al-zahra"
-    }
+    },
+    
   ];
 
   return (
@@ -93,7 +94,7 @@ const SocialProofSection: React.FC = () => {
             Trusted by top companies and professionals across Saudi Arabia
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-8">
           {testimonials.map((testimonial, index) => (
             <Testimonial key={index} {...testimonial} />
           ))}

@@ -24,19 +24,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </p>
           
           {/* Interactive Keywords */}
-          <div className="flex flex-wrap justify-center gap-3 mb-16">
-            {content.keywords.map((keyword, index) => (
-              <span
-                key={index}
-                className={`px-4 py-2 rounded-full text-sm font-medium cursor-pointer transition-all duration-300 hover:scale-105 ${
-                  index === 0 ? (isDarkMode ? 'bg-white text-black' : 'bg-black text-white') : 
-                  (isDarkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-100 text-black hover:bg-gray-200')
-                }`}
-              >
-                {keyword}
-              </span>
-            ))}
-          </div>
+         <div className="flex flex-wrap justify-center gap-3 mb-16">
+  {content.keywords.map((keyword, index) => (
+    <span
+      key={index}
+      className={`px-4 py-2 rounded-full text-sm font-medium cursor-pointer transition-all duration-300 hover:scale-105 
+        ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'} 
+        hover:bg-black hover:text-white`}
+    >
+      {keyword}
+    </span>
+  ))}
+</div>
+
 
           {/* CTA Button */}
           <button className={`px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:scale-105 ${isDarkMode ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}>
