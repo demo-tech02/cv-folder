@@ -17,7 +17,7 @@ const Testimonial: React.FC<TestimonialProps> = ({
   imageUrl,
   linkedInUrl,
 }) => (
-  <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+  <div className="bg-gray-50 dark:bg-gray-800 p-6  rounded-lg shadow-lg">
     <div className="flex items-center mb-4">
       <img
         src={imageUrl}
@@ -26,7 +26,7 @@ const Testimonial: React.FC<TestimonialProps> = ({
       />
       <div>
         <h3 className="font-semibold text-lg">{name}</h3>
-        <p className="text-gray-600 dark:text-gray-400 text-sm">
+        <p className="text-gray-600  dark:text-gray-400 text-sm">
           {position} at {company}
         </p>
       </div>
@@ -50,7 +50,7 @@ const Testimonial: React.FC<TestimonialProps> = ({
         )}
       </div>
     </div>
-    <blockquote className="text-gray-700 dark:text-gray-300">"{testimonial}"</blockquote>
+    <blockquote className="text-gray-700  dark:text-gray-300">"{testimonial}"</blockquote>
   </div>
 );
 
@@ -84,7 +84,7 @@ const SocialProofSection: React.FC = () => {
   ];
 
   return (
-    <section className="py-16 bg-gray-50 dark:bg-gray-900">
+    <section className="py-16  dark:bg-gray-900 ">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">

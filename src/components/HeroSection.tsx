@@ -13,10 +13,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   language
 }) => {
   return (
-    <section className="pt-24 pb-16 px-4">
+    <section className="pt-28 pb-16 px-4 ">
       <div className="container mx-auto text-center">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight mt-12">
             {content.title}
           </h1>
           <p className="text-lg md:text-xl mb-12 opacity-80">
@@ -24,7 +24,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </p>
           
           {/* Interactive Keywords */}
-         <div className="flex flex-wrap justify-center gap-3 mb-16">
+         <div className="flex flex-wrap justify-center gap-3 mb-16 max-w-xl mx-auto">
   {content.keywords.map((keyword, index) => (
     <span
       key={index}
@@ -37,11 +37,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   ))}
 </div>
 
-
-          {/* CTA Button */}
-          <button className={`px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:scale-105 ${isDarkMode ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}>
-            {language === 'en' ? 'Get Started' : 'ابدأ الآن'}
-          </button>
         </div>
       </div>
     </section>

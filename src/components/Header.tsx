@@ -38,9 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <button className={`p-2 rounded-md transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>
-            <Menu size={20} />
-          </button>
+          
         </div>
       </div>
     </header>

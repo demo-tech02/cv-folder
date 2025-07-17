@@ -8,7 +8,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ isDarkMode, language }) => {
   return (
-    <footer className={`py-12 px-4 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+    <footer className={`py-4 px-4 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
       <div className="container mx-auto text-center">
         <div className="flex items-center justify-center space-x-2 mb-4">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${isDarkMode ? 'bg-white text-black' : 'bg-black text-white'}`}>
