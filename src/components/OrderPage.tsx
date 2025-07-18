@@ -46,17 +46,17 @@ export const OrderPage: React.FC = () => {
       ];
       
       if (!validTypes.includes(file.type)) {
-        toast.error(language === 'en' 
-          ? `Invalid file type: ${file.name}. Please upload PDF, DOC, DOCX, TXT, JPG, or PNG files.`
-          : `نوع ملف غير صالح: ${file.name}. يرجى رفع ملفات PDF أو DOC أو DOCX أو TXT أو JPG أو PNG.`
+        toast.error(language === 'ar' 
+          ? `نوع ملف غير صالح: ${file.name}. يرجى رفع ملفات PDF أو DOC أو DOCX أو TXT أو JPG أو PNG.`
+          : `Invalid file type: ${file.name}. Please upload PDF, DOC, DOCX, TXT, JPG, or PNG files.`
         );
         return false;
       }
       
       if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast.error(language === 'en'
-          ? `File too large: ${file.name}. Maximum size is 10MB.`
-          : `الملف كبير جداً: ${file.name}. الحد الأقصى للحجم هو 10 ميجابايت.`
+        toast.error(language === 'ar'
+          ? `الملف كبير جداً: ${file.name}. الحد الأقصى للحجم هو 10 ميجابايت.`
+          : `File too large: ${file.name}. Maximum size is 10MB.`
         );
         return false;
       }
@@ -66,9 +66,9 @@ export const OrderPage: React.FC = () => {
 
     if (validFiles.length > 0) {
       setUploadedFiles(prev => [...prev, ...validFiles]);
-      toast.success(language === 'en'
-        ? `${validFiles.length} file(s) added successfully!`
-        : `تم إضافة ${validFiles.length} ملف بنجاح!`
+      toast.success(language === 'ar'
+        ? `تم إضافة ${validFiles.length} ملف بنجاح!`
+        : `${validFiles.length} file(s) added successfully!`
       );
     }
   }, [language]);
@@ -88,14 +88,14 @@ export const OrderPage: React.FC = () => {
 
   const removeFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-    toast.info(language === 'en' ? 'File removed' : 'تم حذف الملف');
+    toast.info(language === 'ar' ? 'تم حذف الملف' : 'File removed');
   };
 
   const handleUpload = async () => {
     if (uploadedFiles.length === 0) {
-      toast.error(language === 'en' 
-        ? 'Please select at least one file to upload.'
-        : 'يرجى تحديد ملف واحد على الأقل للرفع.'
+      toast.error(language === 'ar' 
+        ? 'يرجى تحديد ملف واحد على الأقل للرفع.'
+        : 'Please select at least one file to upload.'
       );
       return;
     }
@@ -106,9 +106,9 @@ export const OrderPage: React.FC = () => {
       // Simulate upload process
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      toast.success(language === 'en'
-        ? 'Order submitted successfully! We will contact you within 24 hours.'
-        : 'تم إرسال الطلب بنجاح! سنتواصل معك خلال 24 ساعة.'
+      toast.success(language === 'ar'
+        ? 'تم إرسال الطلب بنجاح! سنتواصل معك خلال 24 ساعة.'
+        : 'Order submitted successfully! We will contact you within 24 hours.'
       );
       
       // Reset form
@@ -120,9 +120,9 @@ export const OrderPage: React.FC = () => {
       }, 2000);
       
     } catch (error) {
-      toast.error(language === 'en'
-        ? 'Upload failed. Please try again.'
-        : 'فشل في الرفع. يرجى المحاولة مرة أخرى.'
+      toast.error(language === 'ar'
+        ? 'فشل في الرفع. يرجى المحاولة مرة أخرى.'
+        : 'Upload failed. Please try again.'
       );
     } finally {
       setIsUploading(false);
@@ -131,9 +131,9 @@ export const OrderPage: React.FC = () => {
 
   const handleCancel = () => {
     if (uploadedFiles.length > 0) {
-      const confirmMessage = language === 'en'
-        ? 'Are you sure you want to cancel? All uploaded files will be lost.'
-        : 'هل أنت متأكد من الإلغاء؟ ستفقد جميع الملفات المرفوعة.';
+      const confirmMessage = language === 'ar'
+        ? 'هل أنت متأكد من الإلغاء؟ ستفقد جميع الملفات المرفوعة.'
+        : 'Are you sure you want to cancel? All uploaded files will be lost.';
       
       if (window.confirm(confirmMessage)) {
         setUploadedFiles([]);
@@ -180,9 +180,9 @@ export const OrderPage: React.FC = () => {
                 {currentContent.orderPage.uploadText}
               </p>
               <p className="text-sm opacity-60">
-                {language === 'en' 
-                  ? 'Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG (Max 10MB each)'
-                  : 'الصيغ المدعومة: PDF، DOC، DOCX، TXT، JPG، PNG (حد أقصى 10 ميجابايت لكل ملف)'
+                {language === 'ar' 
+                  ? 'الصيغ المدعومة: PDF، DOC، DOCX، TXT، JPG، PNG (حد أقصى 10 ميجابايت لكل ملف)'
+                  : 'Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG (Max 10MB each)'
                 }
               </p>
             </div>
@@ -193,7 +193,7 @@ export const OrderPage: React.FC = () => {
             <div className={`rounded-2xl p-6 mb-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
               <h3 className="text-lg font-semibold mb-4 flex items-center">
                 <FileText className="w-5 h-5 mr-2" />
-                {language === 'en' ? 'Uploaded Files' : 'الملفات المرفوعة'}
+                {language === 'ar' ? 'الملفات المرفوعة' : 'Uploaded Files'}
               </h3>
               <div className="space-y-3">
                 {uploadedFiles.map((file, index) => (
@@ -241,7 +241,7 @@ export const OrderPage: React.FC = () => {
               }`}
             >
               {isUploading 
-                ? (language === 'en' ? 'Uploading...' : 'جاري الرفع...')
+                ? (language === 'ar' ? 'جاري الرفع...' : 'Uploading...')
                 : currentContent.orderPage.uploadButton
               }
             </button>

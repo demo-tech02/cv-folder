@@ -45,8 +45,8 @@ export const HomePage: React.FC = () => {
       />
 
       <DatabaseSection
-        content={currentContent.database}
         isDarkMode={isDarkMode}
+        content={currentContent.database}
       />
 
       <AdvantagesSection
@@ -55,8 +55,8 @@ export const HomePage: React.FC = () => {
       />
 
       <SocialProofSection
-        content={currentContent.socialProof}
         isDarkMode={isDarkMode}
+        content={currentContent.socialProof}
       />
 
       <Footer

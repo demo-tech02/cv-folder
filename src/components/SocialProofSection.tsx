@@ -7,9 +7,10 @@ interface TestimonialProps {
   testimonial: string;
   imageUrl: string;
   linkedInUrl?: string;
+  isDarkMode?: boolean;
 }
 
-const Testimonial: React.FC<TestimonialProps & { showTwitter?: boolean }> = ({
+const Testimonial: React.FC<TestimonialProps & { showTwitter?: boolean; isDarkMode?: boolean }> = ({
   name,
   position,
   company,
@@ -17,8 +18,9 @@ const Testimonial: React.FC<TestimonialProps & { showTwitter?: boolean }> = ({
   imageUrl,
   linkedInUrl,
   showTwitter,
+  isDarkMode = false,
 }) => (
-  <div className="bg-gray-50 dark:bg-gray-800 p-6  rounded-lg shadow-lg">
+  <div className={`p-6 rounded-lg shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
     <div className="flex items-center mb-4">
       <img
         src={imageUrl}
@@ -26,8 +28,8 @@ const Testimonial: React.FC<TestimonialProps & { showTwitter?: boolean }> = ({
         className="w-12 h-12 rounded-full mr-4 object-cover"
       />
       <div>
-        <h3 className="font-semibold text-lg">{name}</h3>
-        <p className="text-gray-600  dark:text-gray-400 text-sm">
+        <h3 className={`font-semibold text-lg ${isDarkMode ? 'text-white' : 'text-black'}`}>{name}</h3>
+        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           {position} at {company}
         </p>
       </div>
@@ -70,11 +72,16 @@ const Testimonial: React.FC<TestimonialProps & { showTwitter?: boolean }> = ({
         )}
       </div>
     </div>
-    <blockquote className="text-gray-700  dark:text-gray-300">"{testimonial}"</blockquote>
+    <blockquote className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>"{testimonial}"</blockquote>
   </div>
 );
 
-const SocialProofSection: React.FC = () => {
+interface SocialProofSectionProps {
+  content: any;
+  isDarkMode: boolean;
+}
+
+const SocialProofSection: React.FC<SocialProofSectionProps> = ({ content, isDarkMode }) => {
   const testimonials = [
     {
       name: "Sarah Al-Mahmoud",
@@ -104,13 +111,13 @@ const SocialProofSection: React.FC = () => {
   ];
 
   return (
-    <section className="py-16  dark:bg-gray-900 ">
+    <section className={`py-16 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            What Our Users Say
+          <h2 className={`text-3xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            {content.title}
           </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
+          <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Trusted by top companies and professionals across Saudi Arabia
           </p>
         </div>
@@ -121,6 +128,7 @@ const SocialProofSection: React.FC = () => {
               {...testimonial}
               showTwitter={index === 1}
               linkedInUrl={index === 1 ? undefined : testimonial.linkedInUrl}
+              isDarkMode={isDarkMode}
             />
           ))}
         </div>

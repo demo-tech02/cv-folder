@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={toggleLanguage}
             className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
           >
-            {language === 'en' ? 'العربية' : 'English'}
+            {language === 'ar' ? 'English' : 'العربية'}
           </button>
           <button
             onClick={toggleDarkMode}

@@ -2,119 +2,6 @@ import { Zap, Target, Award, CheckCircle, Users } from 'lucide-react';
 import { Content } from '../types';
 
 export const content: Record<'en' | 'ar', Content> = {
-  en: {
-    hero: {
-      title: "Get Noticed. Get Hired.",
-      subtitle: "Enhance your CV, elevate your LinkedIn, and craft the perfect Cover Letter.",
-      keywords: ["Career", "Professional", "CV", "Development", "Talent", "Personalize", "LinkedIn", "Professional", "Standout", "Showcase", "ATS-Friendly", "Growth"]
-    },
-    services: {
-      title: "Our Services",
-      subtitle: "Professional services tailored to boost your career prospects",
-      items: [
-        {
-          title: "CV Enhancement",
-          description: "Enhance your resume with AI, tailored to Saudi hiring standards",
-          price: "299 SAR"
-        },
-        {
-          title: "LinkedIn Profile Optimization",
-          description: "Maximize your professional presence with strategic profile enhancement",
-          price: "199 SAR"
-        },
-        {
-          title: "Cover Letter Creation",
-          description: "Craft compelling cover letters that capture employers' attention",
-          price: "149 SAR"
-        }
-      ]
-    },
-    offer: {
-      title: "Special Bundle Offer",
-      description: "CV Enhancement + LinkedIn Optimization",
-      originalPrice: "498 SAR",
-      discountedPrice: "399 SAR",
-      savings: "Save 99 SAR"
-    },
-    database: {
-      title: "Our Talent Database",
-      subtitle: "By purchasing any of our services, you will automatically be added to our exclusive database shared with HR professionals and companies."
-    },
-    advantages: {
-      title: "Platform Advantages",
-      items: [
-        {
-          icon: Zap,
-          title: "Fast Delivery",
-          description: "Quick turnaround without compromising quality"
-        },
-        {
-          icon: Target,
-          title: "AI-Powered Services",
-          description: "Trained on Saudi hiring standards and market requirements"
-        },
-        {
-          icon: Award,
-          title: "High Accuracy & Personalization",
-          description: "Tailored content that reflects your unique professional story"
-        },
-        {
-          icon: CheckCircle,
-          title: "Professional Formatting",
-          description: "Industry-standard layouts that impress recruiters"
-        },
-        {
-          icon: Users,
-          title: "Job Market-Aligned Content",
-          description: "Content optimized for current market demands"
-        }
-      ]
-    },
-    socialProof: {
-      title: "What People Are Saying",
-      posts: [
-        {
-          author: "Sarah Al-Rashid",
-          role: "HR Director @ Tech Solutions KSA",
-          content: "CValue has revolutionized how we discover talent. Their database consistently delivers high-quality candidates.",
-          platform: "LinkedIn"
-        },
-        {
-          author: "Ahmed Hassan",
-          role: "Recruitment Manager @ Global Corp",
-          content: "The CVs coming through CValue are exceptionally well-crafted. It's clear they understand our hiring standards.",
-          platform: "Twitter"
-        },
-        {
-          author: "Fatima Al-Zahra",
-          role: "Talent Acquisition Lead",
-          content: "CValue's LinkedIn optimization service helped our company find the perfect candidates faster than ever.",
-          platform: "LinkedIn"
-        }
-      ]
-    },
-    orderPage: {
-      cv: {
-        title: "CV Enhancement Order",
-        description: "Upload your current CV and we'll enhance it with AI-powered optimization tailored to Saudi hiring standards. Our experts will improve formatting, content structure, and keyword optimization to make your CV stand out to recruiters."
-      },
-      linkedin: {
-        title: "LinkedIn Profile Optimization Order", 
-        description: "Upload your LinkedIn profile details or screenshots and we'll optimize your professional presence. We'll enhance your headline, summary, experience descriptions, and skills to maximize your visibility to recruiters and hiring managers."
-      },
-      coverLetter: {
-        title: "Cover Letter Creation Order",
-        description: "Upload your CV and job description (if available) and we'll craft a compelling cover letter that captures employers' attention. Our AI-powered service creates personalized cover letters that highlight your strengths and match job requirements."
-      },
-      bundle: {
-        title: "Bundle Offer Order - CV + LinkedIn",
-        description: "Upload your current CV and LinkedIn profile details to get both services at a discounted price. We'll enhance your CV and optimize your LinkedIn profile to create a cohesive professional brand that attracts the right opportunities."
-      },
-      uploadText: "Drag and drop your files here, or click to select files",
-      uploadButton: "Upload & Submit Order",
-      cancelButton: "Cancel Order"
-    }
-  },
   ar: {
     hero: {
       title: "اجعل نفسك ملاحظاً. احصل على وظيفة.",
@@ -226,6 +113,119 @@ export const content: Record<'en' | 'ar', Content> = {
       uploadText: "اسحب وأفلت ملفاتك هنا، أو انقر لتحديد الملفات",
       uploadButton: "رفع وإرسال الطلب",
       cancelButton: "إلغاء الطلب"
+    }
+  },
+  en: {
+    hero: {
+      title: "Get Noticed. Get Hired.",
+      subtitle: "Enhance your CV, elevate your LinkedIn, and craft the perfect Cover Letter.",
+      keywords: ["Career", "Professional", "CV", "Development", "Talent", "Personalize", "LinkedIn", "Professional", "Standout", "Showcase", "ATS-Friendly", "Growth"]
+    },
+    services: {
+      title: "Our Services",
+      subtitle: "Professional services tailored to boost your career prospects",
+      items: [
+        {
+          title: "CV Enhancement",
+          description: "Enhance your resume with AI, tailored to Saudi hiring standards",
+          price: "299 SAR"
+        },
+        {
+          title: "LinkedIn Profile Optimization",
+          description: "Maximize your professional presence with strategic profile enhancement",
+          price: "199 SAR"
+        },
+        {
+          title: "Cover Letter Creation",
+          description: "Craft compelling cover letters that capture employers' attention",
+          price: "149 SAR"
+        }
+      ]
+    },
+    offer: {
+      title: "Special Bundle Offer",
+      description: "CV Enhancement + LinkedIn Optimization",
+      originalPrice: "498 SAR",
+      discountedPrice: "399 SAR",
+      savings: "Save 99 SAR"
+    },
+    database: {
+      title: "Our Talent Database",
+      subtitle: "By purchasing any of our services, you will automatically be added to our exclusive database shared with HR professionals and companies."
+    },
+    advantages: {
+      title: "Platform Advantages",
+      items: [
+        {
+          icon: Zap,
+          title: "Fast Delivery",
+          description: "Quick turnaround without compromising quality"
+        },
+        {
+          icon: Target,
+          title: "AI-Powered Services",
+          description: "Trained on Saudi hiring standards and market requirements"
+        },
+        {
+          icon: Award,
+          title: "High Accuracy & Personalization",
+          description: "Tailored content that reflects your unique professional story"
+        },
+        {
+          icon: CheckCircle,
+          title: "Professional Formatting",
+          description: "Industry-standard layouts that impress recruiters"
+        },
+        {
+          icon: Users,
+          title: "Job Market-Aligned Content",
+          description: "Content optimized for current market demands"
+        }
+      ]
+    },
+    socialProof: {
+      title: "What People Are Saying",
+      posts: [
+        {
+          author: "Sarah Al-Rashid",
+          role: "HR Director @ Tech Solutions KSA",
+          content: "CValue has revolutionized how we discover talent. Their database consistently delivers high-quality candidates.",
+          platform: "LinkedIn"
+        },
+        {
+          author: "Ahmed Hassan",
+          role: "Recruitment Manager @ Global Corp",
+          content: "The CVs coming through CValue are exceptionally well-crafted. It's clear they understand our hiring standards.",
+          platform: "Twitter"
+        },
+        {
+          author: "Fatima Al-Zahra",
+          role: "Talent Acquisition Lead",
+          content: "CValue's LinkedIn optimization service helped our company find the perfect candidates faster than ever.",
+          platform: "LinkedIn"
+        }
+      ]
+    },
+    orderPage: {
+      cv: {
+        title: "CV Enhancement Order",
+        description: "Upload your current CV and we'll enhance it with AI-powered optimization tailored to Saudi hiring standards. Our experts will improve formatting, content structure, and keyword optimization to make your CV stand out to recruiters."
+      },
+      linkedin: {
+        title: "LinkedIn Profile Optimization Order", 
+        description: "Upload your LinkedIn profile details or screenshots and we'll optimize your professional presence. We'll enhance your headline, summary, experience descriptions, and skills to maximize your visibility to recruiters and hiring managers."
+      },
+      coverLetter: {
+        title: "Cover Letter Creation Order",
+        description: "Upload your CV and job description (if available) and we'll craft a compelling cover letter that captures employers' attention. Our AI-powered service creates personalized cover letters that highlight your strengths and match job requirements."
+      },
+      bundle: {
+        title: "Bundle Offer Order - CV + LinkedIn",
+        description: "Upload your current CV and LinkedIn profile details to get both services at a discounted price. We'll enhance your CV and optimize your LinkedIn profile to create a cohesive professional brand that attracts the right opportunities."
+      },
+      uploadText: "Drag and drop your files here, or click to select files",
+      uploadButton: "Upload & Submit Order",
+      cancelButton: "Cancel Order"
     }
   }
 };

@@ -34,7 +34,7 @@ export const SpecialOfferSection: React.FC<SpecialOfferSectionProps> = ({
             onClick={handleBundleOrder}
             className={`px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:scale-105 ${isDarkMode ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
           >
-            {language === 'en' ? 'Get Bundle Offer' : 'احصل على العرض المجمع'}
+            {language === 'ar' ? 'احصل على العرض المجمع' : 'Get Bundle Offer'}
           </button>
         </div>
       </div>

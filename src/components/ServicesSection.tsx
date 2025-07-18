@@ -38,7 +38,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
                   onClick={() => handleOrderClick(index === 0 ? 'cv' : index === 1 ? 'linkedin' : 'cover-letter')}
                   className={`px-6 py-2 rounded-lg font-semibold transition-colors ${isDarkMode ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
                 >
-                  {language === 'en' ? 'Order Now' : 'اطلب الآن'}
+                  {language === 'ar' ? 'اطلب الآن' : 'Order Now'}
                 </button>
               </div>
             </div>
