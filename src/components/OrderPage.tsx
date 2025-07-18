@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-toastify';
-import { Upload, X, FileText, CheckCircle } from 'lucide-react';
+import { Upload, X, FileText, CheckCircle, ArrowLeft } from 'lucide-react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { useTheme } from '../hooks/useTheme';
@@ -144,6 +144,9 @@ export const OrderPage: React.FC = () => {
     }
   };
 
+  const handleBack = () => {
+    navigate('/');
+  };
   const serviceContent = getServiceContent();
 
   return (
@@ -157,6 +160,21 @@ export const OrderPage: React.FC = () => {
 
       <main className="pt-24 pb-16 px-4">
         <div className="container mx-auto max-w-4xl">
+          {/* Back Button */}
+          <div className="mb-8">
+            <button
+              onClick={handleBack}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                isDarkMode 
+                  ? 'bg-gray-800 hover:bg-gray-700 text-white' 
+                  : 'bg-gray-100 hover:bg-gray-200 text-black'
+              }`}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{language === 'ar' ? 'العودة للرئيسية' : 'Back to Home'}</span>
+            </button>
+          </div>
+
           {/* Service Info */}
           <div className="text-center mb-12">
             <h1 className="text-3xl md:text-4xl font-bold mb-6">

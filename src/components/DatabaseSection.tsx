@@ -3,14 +3,15 @@ import { BiTargetLock } from "react-icons/bi";
 import { FaUserCheck } from "react-icons/fa";
 import { GoDatabase } from 'react-icons/go';
 import { MdPeopleAlt } from "react-icons/md";
-import { Content } from '../types';
+import { Content, Language } from '../types';
 
 interface DatabaseSectionProps {
   content: Content['database'];
   isDarkMode: boolean;
+  language: Language;
 }
 
-const DatabaseSection: React.FC<DatabaseSectionProps> = ({ content, isDarkMode }) => {
+const DatabaseSection: React.FC<DatabaseSectionProps> = ({ content, isDarkMode, language }) => {
   return (
     <section className={`w-full py-16 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       <div className="container mx-auto px-4">
@@ -33,7 +34,7 @@ const DatabaseSection: React.FC<DatabaseSectionProps> = ({ content, isDarkMode }
                 <MdPeopleAlt className={`w-8 h-8 ${isDarkMode ? 'text-white' : 'text-black'}`} />
               </div>
               <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Direct HR Access
+                {language === 'ar' ? 'وصول مباشر للموارد البشرية' : 'Direct HR Access'}
               </h3>
             </div>
 
@@ -42,7 +43,7 @@ const DatabaseSection: React.FC<DatabaseSectionProps> = ({ content, isDarkMode }
                 <FaUserCheck className={`w-8 h-8 ${isDarkMode ? 'text-white' : 'text-black'}`} />
               </div>
               <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Verified Profiles
+                {language === 'ar' ? 'ملفات شخصية موثقة' : 'Verified Profiles'}
               </h3>
             </div>
 
@@ -51,15 +52,16 @@ const DatabaseSection: React.FC<DatabaseSectionProps> = ({ content, isDarkMode }
                 <BiTargetLock className={`w-8 h-8 ${isDarkMode ? 'text-white' : 'text-black'}`} />
               </div>
               <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Job Matching
+                {language === 'ar' ? 'مطابقة الوظائف' : 'Job Matching'}
               </h3>
             </div>
           </div>
 
           <p className={`mt-12 text-lg max-w-3xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            Your enhanced profile becomes part of a curated talent pool that recruiters actively search
-            through for their hiring needs. This gives you ongoing visibility beyond your initial service
-            purchase.
+            {language === 'ar' 
+              ? 'يصبح ملفك الشخصي المحسن جزءًا من مجموعة مواهب منتقاة يبحث فيها المسؤولون عن التوظيف بنشاط لتلبية احتياجاتهم التوظيفية. هذا يمنحك رؤية مستمرة تتجاوز شراء الخدمة الأولي.'
+              : 'Your enhanced profile becomes part of a curated talent pool that recruiters actively search through for their hiring needs. This gives you ongoing visibility beyond your initial service purchase.'
+            }
           </p>
         </div>
       </div>
