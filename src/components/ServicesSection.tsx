@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Content, Language } from '../types';
 
 interface ServicesSectionProps {
@@ -12,6 +13,12 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
   isDarkMode,
   language
 }) => {
+  const navigate = useNavigate();
+
+  const handleOrderClick = (serviceType: string) => {
+    navigate(`/order/${serviceType}`);
+  };
+
   return (
     <section className="py-16 px-4">
       <div className="container mx-auto">
@@ -27,7 +34,10 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
               <p className="opacity-80 mb-6">{service.description}</p>
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-bold">{service.price}</span>
-                <button className={`px-6 py-2 rounded-lg font-semibold transition-colors ${isDarkMode ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}>
+                <button 
+                  onClick={() => handleOrderClick(index === 0 ? 'cv' : index === 1 ? 'linkedin' : 'cover-letter')}
+                  className={`px-6 py-2 rounded-lg font-semibold transition-colors ${isDarkMode ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
+                >
                   {language === 'en' ? 'Order Now' : 'اطلب الآن'}
                 </button>
               </div>

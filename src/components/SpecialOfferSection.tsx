@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Content, Language } from '../types';
 
 interface SpecialOfferSectionProps {
@@ -12,6 +13,12 @@ export const SpecialOfferSection: React.FC<SpecialOfferSectionProps> = ({
   isDarkMode,
   language
 }) => {
+  const navigate = useNavigate();
+
+  const handleBundleOrder = () => {
+    navigate('/order/bundle');
+  };
+
   return (
     <section className="py-16 px-4">
       <div className="container mx-auto">
@@ -23,7 +30,10 @@ export const SpecialOfferSection: React.FC<SpecialOfferSectionProps> = ({
             <span className="text-4xl font-bold">{content.discountedPrice}</span>
           </div>
           <p className="text-green-500 font-semibold mb-8">{content.savings}</p>
-          <button className={`px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:scale-105 ${isDarkMode ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}>
+          <button 
+            onClick={handleBundleOrder}
+            className={`px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:scale-105 ${isDarkMode ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
+          >
             {language === 'en' ? 'Get Bundle Offer' : 'احصل على العرض المجمع'}
           </button>
         </div>

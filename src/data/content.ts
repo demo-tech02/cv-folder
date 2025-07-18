@@ -92,6 +92,27 @@ export const content: Record<'en' | 'ar', Content> = {
           platform: "LinkedIn"
         }
       ]
+    },
+    orderPage: {
+      cv: {
+        title: "CV Enhancement Order",
+        description: "Upload your current CV and we'll enhance it with AI-powered optimization tailored to Saudi hiring standards. Our experts will improve formatting, content structure, and keyword optimization to make your CV stand out to recruiters."
+      },
+      linkedin: {
+        title: "LinkedIn Profile Optimization Order", 
+        description: "Upload your LinkedIn profile details or screenshots and we'll optimize your professional presence. We'll enhance your headline, summary, experience descriptions, and skills to maximize your visibility to recruiters and hiring managers."
+      },
+      coverLetter: {
+        title: "Cover Letter Creation Order",
+        description: "Upload your CV and job description (if available) and we'll craft a compelling cover letter that captures employers' attention. Our AI-powered service creates personalized cover letters that highlight your strengths and match job requirements."
+      },
+      bundle: {
+        title: "Bundle Offer Order - CV + LinkedIn",
+        description: "Upload your current CV and LinkedIn profile details to get both services at a discounted price. We'll enhance your CV and optimize your LinkedIn profile to create a cohesive professional brand that attracts the right opportunities."
+      },
+      uploadText: "Drag and drop your files here, or click to select files",
+      uploadButton: "Upload & Submit Order",
+      cancelButton: "Cancel Order"
     }
   },
   ar: {
@@ -184,6 +205,27 @@ export const content: Record<'en' | 'ar', Content> = {
           platform: "LinkedIn"
         }
       ]
+    },
+    orderPage: {
+      cv: {
+        title: "طلب تحسين السيرة الذاتية",
+        description: "ارفع سيرتك الذاتية الحالية وسنقوم بتحسينها باستخدام التحسين المدعوم بالذكاء الاصطناعي المصمم خصيصاً لمعايير التوظيف السعودية. خبراؤنا سيحسنون التنسيق وهيكل المحتوى وتحسين الكلمات المفتاحية لجعل سيرتك الذاتية مميزة أمام المسؤولين عن التوظيف."
+      },
+      linkedin: {
+        title: "طلب تحسين ملف لينكد إن",
+        description: "ارفع تفاصيل ملفك الشخصي في لينكد إن أو لقطات الشاشة وسنقوم بتحسين حضورك المهني. سنحسن عنوانك والملخص ووصف الخبرات والمهارات لزيادة ظهورك أمام المسؤولين عن التوظيف ومديري التوظيف."
+      },
+      coverLetter: {
+        title: "طلب إنشاء خطاب التغطية",
+        description: "ارفع سيرتك الذاتية ووصف الوظيفة (إن وجد) وسنكتب خطاب تغطية مقنع يجذب انتباه أصحاب العمل. خدمتنا المدعومة بالذكاء الاصطناعي تنشئ خطابات تغطية شخصية تبرز نقاط قوتك وتتطابق مع متطلبات الوظيفة."
+      },
+      bundle: {
+        title: "طلب العرض المجمع - السيرة الذاتية + لينكد إن",
+        description: "ارفع سيرتك الذاتية الحالية وتفاصيل ملف لينكد إن للحصول على كلا الخدمتين بسعر مخفض. سنحسن سيرتك الذاتية ونحسن ملف لينكد إن لإنشاء علامة تجارية مهنية متماسكة تجذب الفرص المناسبة."
+      },
+      uploadText: "اسحب وأفلت ملفاتك هنا، أو انقر لتحديد الملفات",
+      uploadButton: "رفع وإرسال الطلب",
+      cancelButton: "إلغاء الطلب"
     }
   }
 };

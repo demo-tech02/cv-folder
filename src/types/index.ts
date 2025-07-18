@@ -49,6 +49,25 @@ export interface Content {
     title: string;
     posts: SocialPost[];
   };
+  orderPage: {
+    cv: {
+      title: string;
+      description: string;
+    };
+    linkedin: {
+      title: string;
+      description: string;
+    };
+    coverLetter: {
+      title: string;
+      description: string;
+    };
+    bundle: {
+      title: string;
+      description: string;
+    };
+    uploadText: string;
+    uploadButton: string;
+    cancelButton: string;
+  };
 }
-
-export type Language = 'en' | 'ar';
