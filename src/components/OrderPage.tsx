@@ -100,26 +100,77 @@ export const OrderPage: React.FC = () => {
       return;
     }
 
+    // For CV service, only allow PDF files
+    if (serviceType === 'cv') {
+      const pdfFiles = uploadedFiles.filter(file => file.type === 'application/pdf');
+      if (pdfFiles.length === 0) {
+        toast.error(language === 'ar' 
+          ? 'يرجى رفع ملف PDF للسيرة الذاتية.'
+          : 'Please upload a PDF file for CV enhancement.'
+        );
+        return;
+      }
+      if (pdfFiles.length > 1) {
+        toast.error(language === 'ar' 
+          ? 'يرجى رفع ملف PDF واحد فقط للسيرة الذاتية.'
+          : 'Please upload only one PDF file for CV enhancement.'
+        );
+        return;
+      }
+    }
+
     setIsUploading(true);
     
     try {
-      // Simulate upload process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success(language === 'ar'
-        ? 'تم إرسال الطلب بنجاح! سنتواصل معك خلال 24 ساعة.'
-        : 'Order submitted successfully! We will contact you within 24 hours.'
-      );
-      
-      // Reset form
-      setUploadedFiles([]);
-      
-      // Redirect to home after success
-      setTimeout(() => {
-        navigate('/');
-      }, 2000);
+      if (serviceType === 'cv') {
+        // Handle CV upload with backend API
+        const formData = new FormData();
+        formData.append('file', uploadedFiles[0]);
+
+        const response = await fetch('/upload-resume/', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        
+        toast.success(language === 'ar'
+          ? 'تم رفع السيرة الذاتية بنجاح! جاري التوجيه لصفحة التحميل...'
+          : 'CV uploaded successfully! Redirecting to download page...'
+        );
+
+        // Reset form
+        setUploadedFiles([]);
+        
+        // Navigate to download page with the response data
+        setTimeout(() => {
+          navigate('/download', { state: result });
+        }, 1500);
+      } else {
+        // Handle other services (LinkedIn, Cover Letter, Bundle)
+        // Simulate upload process for now
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        toast.success(language === 'ar'
+          ? 'تم إرسال الطلب بنجاح! سنتواصل معك خلال 24 ساعة.'
+          : 'Order submitted successfully! We will contact you within 24 hours.'
+        );
+        
+        // Reset form
+        setUploadedFiles([]);
+        
+        // Redirect to home after success
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
+      }
       
     } catch (error) {
+      console.error('Upload error:', error);
       toast.error(language === 'ar'
         ? 'فشل في الرفع. يرجى المحاولة مرة أخرى.'
         : 'Upload failed. Please try again.'

@@ -70,4 +70,25 @@ export interface Content {
     uploadButton: string;
     cancelButton: string;
   };
+  downloadPage: {
+    title: string;
+    subtitle: string;
+    classicTitle: string;
+    modernTitle: string;
+    downloadButton: string;
+    backButton: string;
+    processingMessage: string;
+    successMessage: string;
+  };
+}
+
+export interface UploadResponse {
+  session_id: string;
+  classic_resume_url: string;
+  modern_resume_url: string;
+}
+
+export interface Language {
+  ar: string;
+  en: string;
 }
