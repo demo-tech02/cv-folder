@@ -4,6 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { HomePage } from './components/HomePage';
 import { OrderPage } from './components/OrderPage';
+import { PreviewPage } from './components/PreviewPage';
 import { useTheme } from './hooks/useTheme';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/order/:serviceType" element={<OrderPage />} />
+          <Route path="/preview" element={<PreviewPage />} />
         </Routes>
         
         <ToastContainer
