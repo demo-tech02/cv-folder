@@ -1,22 +1,14 @@
 import React, { useState, useCallback } from 'react';
-import { useParams, useNavigate, redirect } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import axios from 'axios';
 import { Upload, X, FileText, CheckCircle, ArrowLeft } from 'lucide-react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 import { content } from '../data/content';
-import { Redirect } from 'react-router-dom';
-
-interface UploadResponse {
-  session_id: string;
-  classic_resume_url: string;
-  modern_resume_url: string;
-}
 
 export const OrderPage: React.FC = () => {
   const { serviceType } = useParams<{ serviceType: string }>();
@@ -25,7 +17,6 @@ export const OrderPage: React.FC = () => {
   const { language, toggleLanguage } = useLanguage();
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadResponse, setUploadResponse] = useState<UploadResponse | null>(null);
 
   const currentContent = content[language];
 
@@ -46,12 +37,19 @@ export const OrderPage: React.FC = () => {
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const validFiles = acceptedFiles.filter(file => {
-      const validTypes = ['application/pdf'];
+      const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+        'image/jpeg',
+        'image/png'
+      ];
       
       if (!validTypes.includes(file.type)) {
         toast.error(language === 'ar' 
-          ? `نوع ملف غير صالح: ${file.name}. يرجى رفع ملفات PDF فقط.`
-          : `Invalid file type: ${file.name}. Please upload PDF files only.`
+          ? `نوع ملف غير صالح: ${file.name}. يرجى رفع ملفات PDF أو DOC أو DOCX أو TXT أو JPG أو PNG.`
+          : `Invalid file type: ${file.name}. Please upload PDF, DOC, DOCX, TXT, JPG, or PNG files.`
         );
         return false;
       }
@@ -80,7 +78,12 @@ export const OrderPage: React.FC = () => {
     onDrop,
     multiple: true,
     accept: {
-      'application/pdf': ['.pdf']
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'text/plain': ['.txt'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png']
     }
   });
 
@@ -119,118 +122,86 @@ export const OrderPage: React.FC = () => {
     setIsUploading(true);
     
     try {
-      // API base URL using ngrok
-      const API_BASE_URL = 'https://c96c42b5f820.ngrok-free.app';
-      
-      // First check if the server is healthy
-      console.log('Checking server health...');
-      try {
-        const healthCheck = await axios.get(`${API_BASE_URL}/health-check`, {
-          headers: {
-            'ngrok-skip-browser-warning': 'true',
-            'Accept': 'application/json'
-          },
-          timeout: 10000 // 10 second timeout for health check
-        });
-        console.log('Health check response:', healthCheck);
-      } catch (healthError) {
-        console.error('Health check failed:', healthError);
-        throw new Error('Server health check failed');
-      }
+      if (serviceType === 'cv') {
+        // Create FormData for multipart/form-data
+        const formData = new FormData();
+        formData.append('file', uploadedFiles[0]);
 
-      // If we get here, server is healthy, proceed with upload
-      const formData = new FormData();
-      const file = uploadedFiles[0];
-      formData.append('file', file, file.name); // Include filename explicitly
-      console.log('File being uploaded:', uploadedFiles[0]);
-      console.log('Uploading to:', `${API_BASE_URL}/upload-resume`);
-      
-      // Log the FormData contents
-      for (let pair of formData.entries()) {
-        console.log('FormData content:', pair[0], pair[1]);
-      }
-
-      const uploadURL = `${API_BASE_URL}/upload-resume`;
-      console.log('Attempting upload to:', uploadURL);
-
-      const response = await axios.post(uploadURL, formData, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'multipart/form-data',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
-        timeout: 60000, // Increased timeout to 60 seconds
-        withCredentials: false,
-      });
-
-      if (!response.data) {
-        throw new Error('No data received from server');
-      }
-
-      const responseData: UploadResponse = response.data;
-      setUploadResponse(responseData);
-      
-      // Navigate to preview page with response data
-      navigate('/preview', { 
-        state: { 
-          sessionId: responseData.session_id,
-          classicResumeUrl: responseData.classic_resume_url,
-          modernResumeUrl: responseData.modern_resume_url
-        }
-      });
-      
-      toast.success(language === 'ar'
-        ? 'تم رفع الملف بنجاح!'
-        : 'File uploaded successfully!'
-      );
-      
-    } catch (error: any) {
-      let errorMessage = language === 'ar' 
-        ? 'فشل في الرفع. يرجى المحاولة مرة أخرى.' 
-        : 'Upload failed. Please try again.';
-
-      if (axios.isAxiosError(error)) {
-        // Log the complete error details
-        console.error('Full error:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          headers: error.response?.headers,
-          config: error.config,
-          url: error.config?.url,
-          message: error.message
-        });
+        console.log('Calling /upload-resume/ API...');
         
-        // Log the raw error for debugging
-        console.error('Raw error object:', error);
+        // Make API call using axios
+        const response = await axios.post('/upload-resume/', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
 
-        // Check if it's a health check error
-        if (error.config?.url?.includes('/health-check')) {
+        console.log('API Response:', response.data);
+        
+        const { session_id, classic_resume_url, modern_resume_url } = response.data;
+        
+        // Store the response data
+        console.log('Session ID:', session_id);
+        console.log('Classic Resume URL:', classic_resume_url);
+        console.log('Modern Resume URL:', modern_resume_url);
+
+        toast.success(language === 'ar'
+          ? 'تم رفع السيرة الذاتية بنجاح! جاري التوجيه لصفحة التحميل...'
+          : 'CV uploaded successfully! Redirecting to download page...'
+        );
+
+        // Reset form
+        setUploadedFiles([]);
+        
+        // Navigate to download page with the response data
+        setTimeout(() => {
+          navigate('/download', { 
+            state: { 
+              session_id, 
+              classic_resume_url, 
+              modern_resume_url 
+            } 
+          });
+        }, 1500);
+      } else {
+        // Handle other services (LinkedIn, Cover Letter, Bundle)
+        // Simulate upload process for now
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        toast.success(language === 'ar'
+          ? 'تم إرسال الطلب بنجاح! سنتواصل معك خلال 24 ساعة.'
+          : 'Order submitted successfully! We will contact you within 24 hours.'
+        );
+        
+        // Reset form
+        setUploadedFiles([]);
+        
+        // Redirect to home after success
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
+      }
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      
+      let errorMessage = language === 'ar'
+        ? 'فشل في الرفع. يرجى المحاولة مرة أخرى.'
+        : 'Upload failed. Please try again.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
           errorMessage = language === 'ar'
-            ? 'الخادم غير متاح حالياً. يرجى المحاولة مرة أخرى لاحقاً.'
-            : 'Server is currently unavailable. Please try again later.';
-        } else if (error.code === 'ECONNREFUSED') {
-          errorMessage = language === 'ar'
-            ? 'لا يمكن الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت الخاص بك.'
-            : 'Cannot connect to server. Please check your internet connection.';
-        } else if (error.response) {
-          // Server responded with an error status
-          const statusMessage = error.response.data?.message || error.response.statusText;
-          errorMessage = language === 'ar'
-            ? `خطأ في الخادم: ${error.response.status} - ${statusMessage}`
-            : `Server error: ${error.response.status} - ${statusMessage}`;
+            ? `خطأ في الخادم: ${error.response.status}`
+            : `Server error: ${error.response.status}`;
         } else if (error.request) {
-          // Request was made but no response received
           errorMessage = language === 'ar'
-            ? 'لم يتم تلقي استجابة من الخادم'
-            : 'No response received from server';
+            ? 'لا يمكن الوصول إلى الخادم'
+            : 'Cannot reach server';
         }
       }
-
+      
       toast.error(errorMessage);
-      console.error('Upload error:', error);
     } finally {
       setIsUploading(false);
     }
@@ -306,8 +277,8 @@ export const OrderPage: React.FC = () => {
               </p>
               <p className="text-sm opacity-60">
                 {language === 'ar' 
-                  ? 'الصيغ المدعومة: PDF فقط (حد أقصى 10 ميجابايت)'
-                  : 'Supported format: PDF only (Max 10MB)'
+                  ? 'الصيغ المدعومة: PDF، DOC، DOCX، TXT، JPG، PNG (حد أقصى 10 ميجابايت لكل ملف)'
+                  : 'Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG (Max 10MB each)'
                 }
               </p>
             </div>
