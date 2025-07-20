@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate, redirect } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { Upload, X, FileText, CheckCircle, ArrowLeft } from 'lucide-react';
@@ -96,24 +95,6 @@ export const OrderPage: React.FC = () => {
         : 'Please select at least one file to upload.'
       );
       return;
-    }
-
-    if (serviceType === 'cv') {
-      // For CV service, only allow PDF files
-      if (uploadedFiles[0].type !== 'application/pdf') {
-        toast.error(language === 'ar' 
-          ? 'يرجى رفع ملف PDF للسيرة الذاتية.'
-          : 'Please upload a PDF file for CV enhancement.'
-        );
-        return;
-      }
-      if (uploadedFiles.length > 1) {
-        toast.error(language === 'ar' 
-          ? 'يرجى رفع ملف PDF واحد فقط للسيرة الذاتية.'
-          : 'Please upload only one PDF file for CV enhancement.'
-        );
-        return;
-      }
     }
 
     setIsUploading(true);
