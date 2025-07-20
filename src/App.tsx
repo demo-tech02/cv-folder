@@ -16,7 +16,11 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/order/:serviceType" element={<OrderPage />} />
+<<<<<<< HEAD
           <Route path="/preview" element={<PreviewPage />} />
+=======
+          <Route path="/download" element={<DownloadPage />} />
+>>>>>>> 2e5c29a0c8d7003c4aa10147c3f3ef7f1bb1a0c9
         </Routes>
         
         <ToastContainer

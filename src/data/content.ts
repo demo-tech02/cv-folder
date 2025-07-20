@@ -113,6 +113,16 @@ export const content: Record<'en' | 'ar', Content> = {
       uploadText: "اسحب وأفلت ملفاتك هنا، أو انقر لتحديد الملفات",
       uploadButton: "رفع وإرسال الطلب",
       cancelButton: "إلغاء الطلب"
+    },
+    downloadPage: {
+      title: "تحميل السيرة الذاتية المحسنة",
+      subtitle: "تم معالجة سيرتك الذاتية بنجاح! يمكنك الآن تحميل النسخة المفضلة لديك.",
+      classicTitle: "السيرة الذاتية الكلاسيكية",
+      modernTitle: "السيرة الذاتية العصرية",
+      downloadButton: "تحميل",
+      backButton: "العودة للرئيسية",
+      processingMessage: "جاري معالجة سيرتك الذاتية...",
+      successMessage: "تم تحميل الملف بنجاح!"
     }
   },
   en: {
@@ -226,6 +236,16 @@ export const content: Record<'en' | 'ar', Content> = {
       uploadText: "Drag and drop your files here, or click to select files",
       uploadButton: "Upload & Submit Order",
       cancelButton: "Cancel Order"
+    },
+    downloadPage: {
+      title: "Download Enhanced Resume",
+      subtitle: "Your resume has been successfully processed! You can now download your preferred version.",
+      classicTitle: "Classic Resume",
+      modernTitle: "Modern Resume",
+      downloadButton: "Download",
+      backButton: "Back to Home",
+      processingMessage: "Processing your resume...",
+      successMessage: "File downloaded successfully!"
     }
   }
 };
