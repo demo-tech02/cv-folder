@@ -1,3 +1,13 @@
+    downloadPage: {
+      title: string;
+      subtitle: string;
+      classicTitle: string;
+      modernTitle: string;
+      downloadButton: string;
+      backButton: string;
+      processingMessage: string;
+      successMessage: string;
+    };
 import { Zap, Target, Award, CheckCircle, Users } from 'lucide-react';
 import { Content } from '../types';
 
