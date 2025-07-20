@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Download, ArrowLeft, FileText, Sparkles } from 'lucide-react';
 import { Header } from './Header';
@@ -42,20 +43,25 @@ export const DownloadPage: React.FC = () => {
         throw new Error('Invalid download URL');
       }
 
-      // Make API call to download
-      const response = await fetch(`/download?session_id=${sessionId}&filename=${fileParam}`, {
-        method: 'GET',
+      console.log('Downloading file:', fileParam);
+      console.log('Session ID:', sessionId);
+      
+      // Make API call to download using axios
+      const response = await axios.get('/download', {
+        params: {
+          session_id: sessionId,
+          filename: fileParam
+        },
+        responseType: 'blob',
         headers: {
           'Accept': 'application/pdf',
-        },
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.statusText}`);
-      }
+      console.log('Download response received');
 
       // Create blob and download
-      const blob = await response.blob();
+      const blob = new Blob([response.data], { type: 'application/pdf' });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -68,10 +74,24 @@ export const DownloadPage: React.FC = () => {
       toast.success(currentContent.downloadPage.successMessage);
     } catch (error) {
       console.error('Download error:', error);
-      toast.error(language === 'ar' 
+      
+      let errorMessage = language === 'ar' 
         ? 'فشل في تحميل الملف. يرجى المحاولة مرة أخرى.'
-        : 'Failed to download file. Please try again.'
-      );
+        : 'Failed to download file. Please try again.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          errorMessage = language === 'ar'
+            ? `خطأ في تحميل الملف: ${error.response.status}`
+            : `Download failed: ${error.response.status}`;
+        } else if (error.request) {
+          errorMessage = language === 'ar'
+            ? 'لا يمكن الوصول إلى الخادم'
+            : 'Cannot reach server';
+        }
+      }
+      
+      toast.error(errorMessage);
     }
   };
 

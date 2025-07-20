@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Upload, X, FileText, CheckCircle, ArrowLeft } from 'lucide-react';
 import { Header } from './Header';
@@ -100,17 +101,16 @@ export const OrderPage: React.FC = () => {
       return;
     }
 
-    // For CV service, only allow PDF files
     if (serviceType === 'cv') {
-      const pdfFiles = uploadedFiles.filter(file => file.type === 'application/pdf');
-      if (pdfFiles.length === 0) {
+      // For CV service, only allow PDF files
+      if (uploadedFiles[0].type !== 'application/pdf') {
         toast.error(language === 'ar' 
           ? 'يرجى رفع ملف PDF للسيرة الذاتية.'
           : 'Please upload a PDF file for CV enhancement.'
         );
         return;
       }
-      if (pdfFiles.length > 1) {
+      if (uploadedFiles.length > 1) {
         toast.error(language === 'ar' 
           ? 'يرجى رفع ملف PDF واحد فقط للسيرة الذاتية.'
           : 'Please upload only one PDF file for CV enhancement.'
@@ -123,21 +123,28 @@ export const OrderPage: React.FC = () => {
     
     try {
       if (serviceType === 'cv') {
-        // Handle CV upload with backend API
+        // Create FormData for multipart/form-data
         const formData = new FormData();
         formData.append('file', uploadedFiles[0]);
 
-        const response = await fetch('/upload-resume/', {
-          method: 'POST',
-          body: formData,
+        console.log('Calling /upload-resume/ API...');
+        
+        // Make API call using axios
+        const response = await axios.post('/upload-resume/', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         });
 
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
-        }
-
-        const result = await response.json();
+        console.log('API Response:', response.data);
         
+        const { session_id, classic_resume_url, modern_resume_url } = response.data;
+        
+        // Store the response data
+        console.log('Session ID:', session_id);
+        console.log('Classic Resume URL:', classic_resume_url);
+        console.log('Modern Resume URL:', modern_resume_url);
+
         toast.success(language === 'ar'
           ? 'تم رفع السيرة الذاتية بنجاح! جاري التوجيه لصفحة التحميل...'
           : 'CV uploaded successfully! Redirecting to download page...'
@@ -148,7 +155,13 @@ export const OrderPage: React.FC = () => {
         
         // Navigate to download page with the response data
         setTimeout(() => {
-          navigate('/download', { state: result });
+          navigate('/download', { 
+            state: { 
+              session_id, 
+              classic_resume_url, 
+              modern_resume_url 
+            } 
+          });
         }, 1500);
       } else {
         // Handle other services (LinkedIn, Cover Letter, Bundle)
@@ -171,10 +184,24 @@ export const OrderPage: React.FC = () => {
       
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error(language === 'ar'
+      
+      let errorMessage = language === 'ar'
         ? 'فشل في الرفع. يرجى المحاولة مرة أخرى.'
-        : 'Upload failed. Please try again.'
-      );
+        : 'Upload failed. Please try again.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          errorMessage = language === 'ar'
+            ? `خطأ في الخادم: ${error.response.status}`
+            : `Server error: ${error.response.status}`;
+        } else if (error.request) {
+          errorMessage = language === 'ar'
+            ? 'لا يمكن الوصول إلى الخادم'
+            : 'Cannot reach server';
+        }
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsUploading(false);
     }
