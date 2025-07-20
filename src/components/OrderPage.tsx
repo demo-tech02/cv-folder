@@ -29,6 +29,7 @@ export const OrderPage: React.FC = () => {
   const currentContent = content[language];
 
   const getServiceContent = () => {
+    
     switch (serviceType) {
       case 'cv':
         return currentContent.orderPage.cv;
