@@ -32,6 +32,7 @@ export const OrderPage: React.FC = () => {
     
     switch (serviceType) {
       case 'cv':
+        
         return currentContent.orderPage.cv;
       case 'linkedin':
         return currentContent.orderPage.linkedin;
