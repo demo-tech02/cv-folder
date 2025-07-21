@@ -15,10 +15,17 @@
   font-style: normal;
   font-display: swap;
 }
-@font-face {
+/* @font-face {
   font-family: 'Nomadica';
   src: url('/path/to/Nomadica.woff2') format('woff2'),
        url('/path/to/Nomadica.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+} */
+ @font-face {
+  font-family: 'Didot';
+  src: url('/fonts/didot.woff2') format('woff2'),
+       url('/fonts/didot.woff') format('woff');
   font-weight: normal;
   font-style: normal;
 }
