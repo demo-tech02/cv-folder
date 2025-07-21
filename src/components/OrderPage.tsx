@@ -31,8 +31,7 @@ export const OrderPage: React.FC = () => {
   const getServiceContent = () => {
     
     switch (serviceType) {
-      case 'cv':
-        
+      case 'cv':  
         return currentContent.orderPage.cv;
       case 'linkedin':
         return currentContent.orderPage.linkedin;
