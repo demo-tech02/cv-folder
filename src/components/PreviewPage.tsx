@@ -52,7 +52,7 @@ export const PreviewPage: React.FC = () => {
             },
           },
         )
-        
+
         const classicBlob = new Blob([classicResponse.data], { type: "application/pdf" })
         const classicUrl = URL.createObjectURL(classicBlob)
         // Add parameters to hide PDF controls but allow scrolling
@@ -107,13 +107,16 @@ export const PreviewPage: React.FC = () => {
     navigate("/", { replace: true })
   }
 
+  // Determine font family class based on language
+  const fontFamilyClass = language === "ar" ? "font-riwaya" : "font-hagrid"
+
   return (
     <div
       className={`min-h-screen transition-all duration-300 ${
         isDarkMode
           ? "bg-gradient-to-br from-black via-gray-900 to-black text-white"
           : "bg-gradient-to-br from-white via-gray-50 to-white text-black"
-      }`}
+      } ${fontFamilyClass}`}
     >
       <Header
         isDarkMode={isDarkMode}
