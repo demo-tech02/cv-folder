@@ -27,7 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-2 cursor-pointer" onClick={handleLogoClick}>
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${isDarkMode ? 'bg-white text-black' : 'bg-white text-black'}`}>
-            <img src="/src/images/logo-1.png" alt="C Logo" className="w-6 h-6 object-contain" />
+            <img src="/logo-1.png" alt="C Logo" className="w-6 h-6 object-contain" />
           </div>
         <span style={{ fontFamily: 'Nomadica' }} className="text-xl font-bold">Value</span>
 
