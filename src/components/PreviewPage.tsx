@@ -52,6 +52,7 @@ export const PreviewPage: React.FC = () => {
             },
           },
         )
+        
         const classicBlob = new Blob([classicResponse.data], { type: "application/pdf" })
         const classicUrl = URL.createObjectURL(classicBlob)
         // Add parameters to hide PDF controls but allow scrolling
