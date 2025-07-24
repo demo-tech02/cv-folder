@@ -13,8 +13,9 @@ import { content } from '../data/content';
 
 interface UploadResponse {
   session_id: string;
-  classic_resume_url: string;
-  modern_resume_url: string;
+  classic_resume_url?: string;
+  modern_resume_url?: string;
+  file_name?: string;
 }
 
 export const OrderPage: React.FC = () => {
@@ -26,12 +27,18 @@ export const OrderPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResponse, setUploadResponse] = useState<UploadResponse | null>(null);
 
-  const currentContent = content[language];
+  // Cover letter extra fields
+  const [company, setCompany] = useState('');
+  const [location, setLocation] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+
+  const currentContent = content[language as unknown as 'ar' | 'en'];
 
   const getServiceContent = () => {
     
     switch (serviceType) {
-      case 'cv':
+      case 'cv':  
         return currentContent.orderPage.cv;
       case 'linkedin':
         return currentContent.orderPage.linkedin;
@@ -49,17 +56,17 @@ export const OrderPage: React.FC = () => {
       const validTypes = ['application/pdf'];
       
       if (!validTypes.includes(file.type)) {
-        toast.error(language === 'ar' 
+        toast.error(String(language) === 'ar' 
           ? `نوع ملف غير صالح: ${file.name}. يرجى رفع ملفات PDF فقط.`
           : `Invalid file type: ${file.name}. Please upload PDF files only.`
         );
         return false;
       }
       
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast.error(language === 'ar'
-          ? `الملف كبير جداً: ${file.name}. الحد الأقصى للحجم هو 10 ميجابايت.`
-          : `File too large: ${file.name}. Maximum size is 10MB.`
+      if (file.size > 30 * 1024 * 1024) { // 30MB limit
+        toast.error(String(language) === 'ar'
+          ? `الملف كبير جداً: ${file.name}. الحد الأقصى للحجم هو 30 ميجابايت.`
+          : `File too large: ${file.name}. Maximum size is 30MB.`
         );
         return false;
       }
@@ -69,7 +76,7 @@ export const OrderPage: React.FC = () => {
 
     if (validFiles.length > 0) {
       setUploadedFiles(prev => [...prev, ...validFiles]);
-      toast.success(language === 'ar'
+      toast.success(String(language) === 'ar'
         ? `تم إضافة ${validFiles.length} ملف بنجاح!`
         : `${validFiles.length} file(s) added successfully!`
       );
@@ -86,24 +93,40 @@ export const OrderPage: React.FC = () => {
 
   const removeFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-    toast.info(language === 'ar' ? 'تم حذف الملف' : 'File removed');
+    toast.info(String(language) === 'ar' ? 'تم حذف الملف' : 'File removed');
   };
 
   const handleUpload = async () => {
     if (uploadedFiles.length === 0) {
-      toast.error(language === 'ar' 
+      toast.error(String(language) === 'ar'
         ? 'يرجى تحديد ملف واحد على الأقل للرفع.'
         : 'Please select at least one file to upload.'
       );
       return;
     }
 
+    // For cover-letter, check required fields
+    if (serviceType === 'cover-letter') {
+      if (!company || !location || !jobTitle || !jobDescription) {
+        toast.error(String(language) === 'ar'
+          ? 'يرجى ملء جميع حقول الوظيفة.'
+          : 'Please fill in all job details fields.'
+        );
+        return;
+      }
+    }
+
     setIsUploading(true);
     
     try {
-      // API base URL using ngrok
-      const API_BASE_URL = 'https://c96c42b5f820.ngrok-free.app';
-      
+      // API base URL and endpoint selection based on serviceType
+      let API_BASE_URL = 'https://c96c42b5f820.ngrok-free.app';
+      let uploadEndpoint = '/upload-resume';
+      if (serviceType === 'cover-letter') {
+        API_BASE_URL = 'https://ai.cvaluepro.com/cover';
+        uploadEndpoint = '/generate-cover-letter';
+      }
+
       // First check if the server is healthy
       console.log('Checking server health...');
       try {
@@ -124,15 +147,23 @@ export const OrderPage: React.FC = () => {
       const formData = new FormData();
       const file = uploadedFiles[0];
       formData.append('file', file, file.name); // Include filename explicitly
+
+      // For cover-letter, append extra fields
+      if (serviceType === 'cover-letter') {
+        formData.append('file', file, file.name); // Explicitly add file as parameter
+        formData.append('company', company);
+        formData.append('location', location);
+        formData.append('job_title', jobTitle);
+        formData.append('job_description', jobDescription);
+      }
+
       console.log('File being uploaded:', uploadedFiles[0]);
-      console.log('Uploading to:', `${API_BASE_URL}/upload-resume`);
-      
-      // Log the FormData contents
+      console.log('Uploading to:', `${API_BASE_URL}${uploadEndpoint}`);
       for (let pair of formData.entries()) {
         console.log('FormData content:', pair[0], pair[1]);
       }
 
-      const uploadURL = `${API_BASE_URL}/upload-resume`;
+      const uploadURL = `${API_BASE_URL}${uploadEndpoint}`;
       console.log('Attempting upload to:', uploadURL);
 
       const response = await axios.post(uploadURL, formData, {
@@ -153,23 +184,34 @@ export const OrderPage: React.FC = () => {
 
       const responseData: UploadResponse = response.data;
       setUploadResponse(responseData);
-      
+
       // Navigate to preview page with response data
-      navigate('/preview', { 
-        state: { 
-          sessionId: responseData.session_id,
-          classicResumeUrl: responseData.classic_resume_url,
-          modernResumeUrl: responseData.modern_resume_url
-        }
-      });
-      
-      toast.success(language === 'ar'
+      if (serviceType === 'cover-letter') {
+        // Log the response data to debug
+        console.log('Response data:', responseData);
+        
+        navigate('/cover-letter-preview', {
+          state: {
+            session_id: responseData.session_id,
+            cover_letter_filename: responseData.file_name
+          }
+        });
+      } else {
+        navigate('/preview', {
+          state: {
+            sessionId: responseData.session_id,
+            classicResumeUrl: responseData.classic_resume_url,
+            modernResumeUrl: responseData.modern_resume_url
+          }
+        });
+      }
+
+      toast.success(String(language) === 'ar'
         ? 'تم رفع الملف بنجاح!'
         : 'File uploaded successfully!'
       );
-      
     } catch (error: any) {
-      let errorMessage = language === 'ar' 
+      let errorMessage = String(language) === 'ar' 
         ? 'فشل في الرفع. يرجى المحاولة مرة أخرى.' 
         : 'Upload failed. Please try again.';
 
@@ -190,22 +232,22 @@ export const OrderPage: React.FC = () => {
 
         // Check if it's a health check error
         if (error.config?.url?.includes('/health-check')) {
-          errorMessage = language === 'ar'
+          errorMessage = String(language) === 'ar'
             ? 'الخادم غير متاح حالياً. يرجى المحاولة مرة أخرى لاحقاً.'
             : 'Server is currently unavailable. Please try again later.';
         } else if (error.code === 'ECONNREFUSED') {
-          errorMessage = language === 'ar'
+          errorMessage = String(language) === 'ar'
             ? 'لا يمكن الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت الخاص بك.'
             : 'Cannot connect to server. Please check your internet connection.';
         } else if (error.response) {
           // Server responded with an error status
           const statusMessage = error.response.data?.message || error.response.statusText;
-          errorMessage = language === 'ar'
+          errorMessage = String(language) === 'ar'
             ? `خطأ في الخادم: ${error.response.status} - ${statusMessage}`
             : `Server error: ${error.response.status} - ${statusMessage}`;
         } else if (error.request) {
           // Request was made but no response received
-          errorMessage = language === 'ar'
+          errorMessage = String(language) === 'ar'
             ? 'لم يتم تلقي استجابة من الخادم'
             : 'No response received from server';
         }
@@ -220,7 +262,7 @@ export const OrderPage: React.FC = () => {
 
   const handleCancel = () => {
     if (uploadedFiles.length > 0) {
-      const confirmMessage = language === 'ar'
+      const confirmMessage = String(language) === 'ar'
         ? 'هل أنت متأكد من الإلغاء؟ ستفقد جميع الملفات المرفوعة.'
         : 'Are you sure you want to cancel? All uploaded files will be lost.';
       
@@ -260,7 +302,7 @@ export const OrderPage: React.FC = () => {
               }`}
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>{language === 'ar' ? 'العودة للرئيسية' : 'Back to Home'}</span>
+              <span>{String(language) === 'ar' ? 'العودة للرئيسية' : 'Back to Home'}</span>
             </button>
           </div>
 
@@ -287,7 +329,7 @@ export const OrderPage: React.FC = () => {
                 {currentContent.orderPage.uploadText}
               </p>
               <p className="text-sm opacity-60">
-                {language === 'ar' 
+                {String(language) === 'ar'
                   ? 'الصيغ المدعومة: PDF فقط (حد أقصى 10 ميجابايت)'
                   : 'Supported format: PDF only (Max 10MB)'
                 }
@@ -295,12 +337,13 @@ export const OrderPage: React.FC = () => {
             </div>
           </div>
 
+
           {/* Uploaded Files */}
           {uploadedFiles.length > 0 && (
             <div className={`rounded-2xl p-6 mb-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
               <h3 className="text-lg font-semibold mb-4 flex items-center">
                 <FileText className="w-5 h-5 mr-2" />
-                {language === 'ar' ? 'الملفات المرفوعة' : 'Uploaded Files'}
+                {String(language) === 'ar' ? 'الملفات المرفوعة' : 'Uploaded Files'}
               </h3>
               <div className="space-y-3">
                 {uploadedFiles.map((file, index) => (
@@ -322,6 +365,65 @@ export const OrderPage: React.FC = () => {
                     </button>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cover Letter Extra Fields */}
+          {serviceType === 'cover-letter' && (
+            <div className={`rounded-2xl p-6 mb-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                {String(language) === 'ar' ? 'تفاصيل الوظيفة' : 'Job Details'}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-1 font-medium">
+                    {String(language) === 'ar' ? 'اسم الشركة' : 'Company Name'}
+                  </label>
+                  <input
+                    type="text"
+                    value={company}
+                    onChange={e => setCompany(e.target.value)}
+                    className={`w-full px-4 py-2 rounded-lg border focus:outline-none transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    placeholder={String(language) === 'ar' ? 'ادخل اسم الشركة' : 'Enter company name'}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    {language === 'ar' ? 'موقع الشركة' : 'Company Location'}
+                  </label>
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={e => setLocation(e.target.value)}
+                    className={`w-full px-4 py-2 rounded-lg border focus:outline-none transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    placeholder={language === 'ar' ? 'ادخل موقع الشركة' : 'Enter company location'}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">
+                    {language === 'ar' ? 'المسمى الوظيفي' : 'Job Title'}
+                  </label>
+                  <input
+                    type="text"
+                    value={jobTitle}
+                    onChange={e => setJobTitle(e.target.value)}
+                    className={`w-full px-4 py-2 rounded-lg border focus:outline-none transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    placeholder={language === 'ar' ? 'ادخل المسمى الوظيفي' : 'Enter job title'}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block mb-1 font-medium">
+                    {language === 'ar' ? 'وصف الوظيفة' : 'Job Description'}
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={jobDescription}
+                    onChange={e => setJobDescription(e.target.value)}
+                    className={`w-full px-4 py-2 rounded-lg border focus:outline-none transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    placeholder={language === 'ar' ? 'ادخل وصف الوظيفة' : 'Enter job description'}
+                  />
+                </div>
               </div>
             </div>
           )}

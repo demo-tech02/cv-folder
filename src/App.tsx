@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { HomePage } from './components/HomePage';
 import { OrderPage } from './components/OrderPage';
 import { PreviewPage } from './components/PreviewPage';
+import { CoverLetterPreview } from './components/CoverLetterPreview';
 import { useTheme } from './hooks/useTheme';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/order/:serviceType" element={<OrderPage />} />
           <Route path="/preview" element={<PreviewPage />} />
+          <Route path="/cover-letter-preview" element={<CoverLetterPreview />} />
         </Routes>
         
         <ToastContainer
