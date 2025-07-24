@@ -9,12 +9,326 @@ import { Header } from "./Header"
 import { Footer } from "./Footer"
 import { useTheme } from "../hooks/useTheme"
 import { useLanguage } from "../hooks/useLanguage"
-import { Loader2, Download, Eye, ArrowLeft, FileText, Sparkles } from "lucide-react"
+import { Loader2, Download, Eye, ArrowLeft, FileText, Sparkles, X, CreditCard, Lock, Shield } from "lucide-react"
 
 interface LocationState {
   sessionId: string
   classicResumeUrl: string
   modernResumeUrl: string
+}
+
+// Tap Payment Modal Component
+interface PaymentModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onPaymentSuccess: () => void
+  amount: number
+  resumeType: 'classic' | 'modern'
+  isDarkMode: boolean
+  language: string
+}
+
+const PaymentModal: React.FC<PaymentModalProps> = ({
+  isOpen,
+  onClose,
+  onPaymentSuccess,
+  amount,
+  resumeType,
+  isDarkMode,
+  language
+}) => {
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [cardNumber, setCardNumber] = useState('')
+  const [expiryDate, setExpiryDate] = useState('')
+  const [cvv, setCvv] = useState('')
+  const [cardholderName, setCardholderName] = useState('')
+
+  // Format card number with spaces
+  const formatCardNumber = (value: string) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '')
+    const matches = v.match(/\d{4,16}/g)
+    const match = matches && matches[0] || ''
+    const parts = []
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4))
+    }
+    if (parts.length) {
+      return parts.join(' ')
+    } else {
+      return v
+    }
+  }
+
+  // Format expiry date MM/YY
+  const formatExpiryDate = (value: string) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '')
+    if (v.length >= 2) {
+      return v.substring(0, 2) + '/' + v.substring(2, 4)
+    }
+    return v
+  }
+
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCardNumber(e.target.value)
+    if (formatted.length <= 19) {
+      setCardNumber(formatted)
+    }
+  }
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatExpiryDate(e.target.value)
+    if (formatted.length <= 5) {
+      setExpiryDate(formatted)
+    }
+  }
+
+  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, '')
+    if (value.length <= 4) {
+      setCvv(value)
+    }
+  }
+
+  const processPayment = async () => {
+    if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
+      toast.error(language === 'ar' ? 'يرجى ملء جميع الحقول' : 'Please fill all fields')
+      return
+    }
+
+    // Basic card validation
+    const cardNumberClean = cardNumber.replace(/\s/g, '')
+    if (cardNumberClean.length < 13 || cardNumberClean.length > 19) {
+      toast.error(language === 'ar' ? 'رقم البطاقة غير صحيح' : 'Invalid card number')
+      return
+    }
+
+    const [expMonth, expYear] = expiryDate.split('/')
+    const currentDate = new Date()
+    const currentYear = currentDate.getFullYear() % 100
+    const currentMonth = currentDate.getMonth() + 1
+    
+    if (parseInt(expMonth) < 1 || parseInt(expMonth) > 12) {
+      toast.error(language === 'ar' ? 'تاريخ انتهاء البطاقة غير صحيح' : 'Invalid expiry date')
+      return
+    }
+    
+    if (parseInt(expYear) < currentYear || (parseInt(expYear) === currentYear && parseInt(expMonth) < currentMonth)) {
+      toast.error(language === 'ar' ? 'البطاقة منتهية الصلاحية' : 'Card has expired')
+      return
+    }
+
+    if (cvv.length < 3 || cvv.length > 4) {
+      toast.error(language === 'ar' ? 'رمز الأمان غير صحيح' : 'Invalid CVV')
+      return
+    }
+    setIsProcessing(true)
+
+    try {
+      // Simulate payment processing with realistic timing
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Simulate different payment scenarios based on card number
+      const lastDigit = cardNumberClean.slice(-1)
+      
+      // Simulate 90% success rate (fail only if last digit is 0)
+      if (lastDigit === '0') {
+        throw new Error('Payment declined by bank')
+      }
+      
+      // Simulate successful payment
+      toast.success(language === 'ar' ? 'تم الدفع بنجاح!' : 'Payment successful!')
+      onPaymentSuccess()
+      onClose()
+      
+      // Reset form
+      setCardNumber('')
+      setExpiryDate('')
+      setCvv('')
+      setCardholderName('')
+      
+    } catch (error) {
+      console.error('Payment error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Payment failed'
+      
+      if (errorMessage.includes('declined')) {
+        toast.error(language === 'ar' ? 'تم رفض الدفع من البنك' : 'Payment declined by bank')
+      } else {
+        toast.error(language === 'ar' ? 'فشل في الدفع. يرجى المحاولة مرة أخرى' : 'Payment failed. Please try again')
+      }
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+      <div className={`relative w-full max-w-md rounded-2xl p-6 shadow-2xl ${
+        isDarkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+      }`}>
+        <button
+          onClick={onClose}
+          disabled={isProcessing}
+          className={`absolute top-4 right-4 p-2 rounded-lg transition-colors ${
+            isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+          }`}
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <CreditCard className="w-8 h-8 text-blue-600" />
+            <h2 className="text-2xl font-bold">
+              {language === 'ar' ? 'الدفع الآمن' : 'Secure Payment'}
+            </h2>
+          </div>
+          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            {language === 'ar' 
+              ? `دفع $${amount} لتحميل السيرة الذاتية ${resumeType === 'classic' ? 'الكلاسيكية' : 'العصرية'}`
+              : `Pay $${amount} to download your ${resumeType} resume`
+            }
+          </p>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          {/* Cardholder Name */}
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              {language === 'ar' ? 'اسم حامل البطاقة' : 'Cardholder Name'}
+            </label>
+            <input
+              type="text"
+              value={cardholderName}
+              onChange={(e) => setCardholderName(e.target.value)}
+              disabled={isProcessing}
+              className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                isDarkMode 
+                  ? 'bg-gray-800 border-gray-700 text-white focus:border-blue-500' 
+                  : 'bg-white border-gray-300 text-black focus:border-blue-500'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20`}
+              placeholder={language === 'ar' ? 'أدخل اسم حامل البطاقة' : 'Enter cardholder name'}
+            />
+          </div>
+
+          {/* Card Number */}
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              {language === 'ar' ? 'رقم البطاقة' : 'Card Number'}
+            </label>
+            <input
+              type="text"
+              value={cardNumber}
+              onChange={handleCardNumberChange}
+              disabled={isProcessing}
+              className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                isDarkMode 
+                  ? 'bg-gray-800 border-gray-700 text-white focus:border-blue-500' 
+                  : 'bg-white border-gray-300 text-black focus:border-blue-500'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20`}
+              placeholder="1234 5678 9012 3456"
+            />
+          </div>
+
+          {/* Expiry and CVV */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {language === 'ar' ? 'تاريخ الانتهاء' : 'Expiry Date'}
+              </label>
+              <input
+                type="text"
+                value={expiryDate}
+                onChange={handleExpiryChange}
+                disabled={isProcessing}
+                className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700 text-white focus:border-blue-500' 
+                    : 'bg-white border-gray-300 text-black focus:border-blue-500'
+                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20`}
+                placeholder="MM/YY"
+              />
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {language === 'ar' ? 'رمز الأمان' : 'CVV'}
+              </label>
+              <input
+                type="text"
+                value={cvv}
+                onChange={handleCvvChange}
+                disabled={isProcessing}
+                className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700 text-white focus:border-blue-500' 
+                    : 'bg-white border-gray-300 text-black focus:border-blue-500'
+                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20`}
+                placeholder="123"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Security Info */}
+        <div className="flex items-center justify-center gap-2 mb-6 text-green-600">
+          <Shield className="w-4 h-4" />
+          <Lock className="w-4 h-4" />
+          <span className="text-sm font-medium">
+            {language === 'ar' ? 'محمي بتشفير SSL 256-bit' : '256-bit SSL Encrypted'}
+          </span>
+        </div>
+
+        {/* Supported Cards */}
+        <div className="flex justify-center gap-2 mb-6">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>{language === 'ar' ? 'البطاقات المدعومة:' : 'Supported:'}</span>
+            <span className="font-semibold">VISA</span>
+            <span className="font-semibold">MasterCard</span>
+            <span className="font-semibold">AMEX</span>
+          </div>
+        </div>
+
+        {/* Pay Button */}
+        <button
+          onClick={processPayment}
+          disabled={isProcessing || !cardNumber || !expiryDate || !cvv || !cardholderName}
+          className={`w-full py-4 rounded-lg font-semibold text-white transition-all duration-200 ${
+            isProcessing || !cardNumber || !expiryDate || !cvv || !cardholderName
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform hover:scale-[1.02] active:scale-[0.98]'
+          }`}
+        >
+          {isProcessing ? (
+            <div className="flex items-center justify-center gap-2">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>{language === 'ar' ? 'جاري المعالجة...' : 'Processing...'}</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              <span>{language === 'ar' ? `ادفع $${amount}` : `Pay $${amount}`}</span>
+            </div>
+          )}
+        </button>
+
+        {/* Processing Overlay */}
+        {isProcessing && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-2xl">
+            <div className="text-center text-white">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+              <p className="text-sm font-medium">
+                {language === 'ar' ? 'جاري معالجة الدفع...' : 'Processing payment...'}
+              </p>
+              <p className="text-xs opacity-75 mt-1">
+                {language === 'ar' ? 'يرجى عدم إغلاق هذه النافذة' : 'Please do not close this window'}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export const PreviewPage: React.FC = () => {
@@ -27,6 +341,146 @@ export const PreviewPage: React.FC = () => {
   const [classicPdfUrl, setClassicPdfUrl] = useState<string>("")
   const [modernPdfUrl, setModernPdfUrl] = useState<string>("")
   const [activePreview, setActivePreview] = useState<"classic" | "modern">("classic")
+  
+  // Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [selectedResumeType, setSelectedResumeType] = useState<'classic' | 'modern'>('classic')
+  const [paymentAmount] = useState(10) // Set your price here
+
+  // Screenshot and Screen Recording Protection
+  useEffect(() => {
+    // Add CSS to prevent screenshots and recordings
+    const style = document.createElement('style')
+    style.textContent = `
+      body {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        pointer-events: auto !important;
+      }
+      
+      img, video, iframe {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        pointer-events: none;
+      }
+      
+      @media print {
+        body { display: none !important; }
+      }
+    `
+    document.head.appendChild(style)
+
+    // Disable right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Disable key combinations for screenshots and dev tools
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+Shift+C, Ctrl+A, Ctrl+S, Ctrl+P
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && (e.key === 'u' || e.key === 'U')) ||
+        (e.ctrlKey && (e.key === 'a' || e.key === 'A')) ||
+        (e.ctrlKey && (e.key === 's' || e.key === 'S')) ||
+        (e.ctrlKey && (e.key === 'p' || e.key === 'P')) ||
+        // Print Screen keys
+        e.key === 'PrintScreen' ||
+        // Windows + Shift + S (Snipping Tool)
+        (e.metaKey && e.shiftKey && e.key === 'S') ||
+        // Alt + PrintScreen
+        (e.altKey && e.key === 'PrintScreen')
+      ) {
+        e.preventDefault()
+        toast.error(language === 'ar' ? 'هذا الإجراء غير مسموح' : 'This action is not allowed')
+        return false
+      }
+    }
+
+    // Disable drag and drop
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Disable text selection
+    const handleSelectStart = (e: Event) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Add event listeners
+    document.addEventListener('contextmenu', handleContextMenu)
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('dragstart', handleDragStart)
+    document.addEventListener('selectstart', handleSelectStart)
+
+    // Disable print
+    window.addEventListener('beforeprint', (e) => {
+      e.preventDefault()
+      toast.error(language === 'ar' ? 'الطباعة غير مسموحة' : 'Printing is not allowed')
+      return false
+    })
+
+    // Blur page when window loses focus (prevents screen recording)
+    let blurTimeout: NodeJS.Timeout
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        document.body.style.filter = 'blur(10px)'
+        document.body.style.userSelect = 'none'
+      } else {
+        // Add small delay to prevent flashing
+        blurTimeout = setTimeout(() => {
+          document.body.style.filter = 'none'
+        }, 100)
+      }
+    }
+
+    const handleBlur = () => {
+      document.body.style.filter = 'blur(10px)'
+    }
+
+    const handleFocus = () => {
+      clearTimeout(blurTimeout)
+      blurTimeout = setTimeout(() => {
+        document.body.style.filter = 'none'
+      }, 100)
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleBlur)
+    window.addEventListener('focus', handleFocus)
+
+    // Cleanup function
+    return () => {
+      document.head.removeChild(style)
+      document.removeEventListener('contextmenu', handleContextMenu)
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('dragstart', handleDragStart)
+      document.removeEventListener('selectstart', handleSelectStart)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleBlur)
+      window.removeEventListener('focus', handleFocus)
+      clearTimeout(blurTimeout)
+      document.body.style.filter = 'none'
+    }
+  }, [language])
 
   // Redirect to home if no state is available
   useEffect(() => {
@@ -52,6 +506,7 @@ export const PreviewPage: React.FC = () => {
             },
           },
         )
+
         const classicBlob = new Blob([classicResponse.data], { type: "application/pdf" })
         const classicUrl = URL.createObjectURL(classicBlob)
         // Add parameters to hide PDF controls but allow scrolling
@@ -102,17 +557,50 @@ export const PreviewPage: React.FC = () => {
     document.body.removeChild(link)
   }
 
+  const handleDownloadClick = (resumeType: 'classic' | 'modern') => {
+    setSelectedResumeType(resumeType)
+    setShowPaymentModal(true)
+  }
+
+  const handlePaymentSuccess = () => {
+    const url = selectedResumeType === 'classic' ? classicPdfUrl : modernPdfUrl
+    const filename = `${selectedResumeType}-resume.pdf`
+    
+    // Download the file
+    downloadPdf(url, filename)
+    
+    // Show success message
+    toast.success(language === 'ar' ? 'تم الدفع بنجاح! جاري تحميل السيرة الذاتية...' : 'Payment successful! Downloading your resume...')
+    
+    // Redirect to home page after successful payment and download
+    setTimeout(() => {
+      toast.success(language === 'ar' ? 'شكراً لك! ستتم إعادة توجيهك إلى الصفحة الرئيسية' : 'Thank you! Redirecting to home page...')
+      navigate("/", { replace: true })
+    }, 2000)
+  }
+
   const handleBackClick = () => {
     navigate("/", { replace: true })
   }
 
+  // Determine font family class based on language
+  const fontFamilyClass = language === "ar" ? "font-riwaya" : "font-hagrid"
+
   return (
     <div
-      className={`min-h-screen transition-all duration-300 ${
+      className={`min-h-screen transition-all duration-300 select-none ${
         isDarkMode
           ? "bg-gradient-to-br from-black via-gray-900 to-black text-white"
           : "bg-gradient-to-br from-white via-gray-50 to-white text-black"
-      }`}
+      } ${fontFamilyClass}`}
+      style={{
+        WebkitUserSelect: 'none',
+        MozUserSelect: 'none',
+        msUserSelect: 'none',
+        userSelect: 'none',
+        WebkitTouchCallout: 'none',
+        WebkitTapHighlightColor: 'transparent'
+      }}
     >
       <Header
         isDarkMode={isDarkMode}
@@ -199,13 +687,13 @@ export const PreviewPage: React.FC = () => {
                       </h2>
                     </div>
                     <button
-                      onClick={() => downloadPdf(classicPdfUrl, "classic-resume.pdf")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                      onClick={() => handleDownloadClick('classic')}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
                         isDarkMode ? "bg-white text-black hover:bg-gray-100" : "bg-black text-white hover:bg-gray-800"
                       }`}
                     >
                       <Download className="w-4 h-4" />
-                      <span className="font-medium">{language === "ar" ? "تحميل" : "Download"}</span>
+                      <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
                     </button>
                   </div>
                   <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
@@ -222,7 +710,12 @@ export const PreviewPage: React.FC = () => {
                         : "border-gray-200 group-hover:border-gray-300"
                     }`}
                   >
-                    <iframe src={classicPdfUrl} className="w-full h-full border-0" title="Classic Resume" />
+                    <iframe 
+                      src={classicPdfUrl} 
+                      className="w-full h-full border-0" 
+                      title="Classic Resume"
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -242,13 +735,13 @@ export const PreviewPage: React.FC = () => {
                       <h2 className="text-2xl font-bold">{language === "ar" ? "النموذج العصري" : "Modern Template"}</h2>
                     </div>
                     <button
-                      onClick={() => downloadPdf(modernPdfUrl, "modern-resume.pdf")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                      onClick={() => handleDownloadClick('modern')}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
                         isDarkMode ? "bg-white text-black hover:bg-gray-100" : "bg-black text-white hover:bg-gray-800"
                       }`}
                     >
                       <Download className="w-4 h-4" />
-                      <span className="font-medium">{language === "ar" ? "تحميل" : "Download"}</span>
+                      <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
                     </button>
                   </div>
                   <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
@@ -265,7 +758,12 @@ export const PreviewPage: React.FC = () => {
                         : "border-gray-200 group-hover:border-gray-300"
                     }`}
                   >
-                    <iframe src={modernPdfUrl} className="w-full h-full border-0" title="Modern Resume" />
+                    <iframe 
+                      src={modernPdfUrl} 
+                      className="w-full h-full border-0" 
+                      title="Modern Resume"
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -325,18 +823,13 @@ export const PreviewPage: React.FC = () => {
                           : "Modern Template"}
                     </h2>
                     <button
-                      onClick={() =>
-                        downloadPdf(
-                          activePreview === "classic" ? classicPdfUrl : modernPdfUrl,
-                          `${activePreview}-resume.pdf`,
-                        )
-                      }
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                      onClick={() => handleDownloadClick(activePreview)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
                         isDarkMode ? "bg-white text-black hover:bg-gray-100" : "bg-black text-white hover:bg-gray-800"
                       }`}
                     >
                       <Download className="w-4 h-4" />
-                      <span className="font-medium">{language === "ar" ? "تحميل" : "Download"}</span>
+                      <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
                     </button>
                   </div>
                   <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
@@ -359,16 +852,26 @@ export const PreviewPage: React.FC = () => {
                       src={activePreview === "classic" ? classicPdfUrl : modernPdfUrl}
                       className="w-full h-full border-0"
                       title={`${activePreview} Resume`}
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
                     />
                   </div>
                 </div>
               </div>
             </div>
-
-            
           </div>
         )}
       </main>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onPaymentSuccess={handlePaymentSuccess}
+        amount={paymentAmount}
+        resumeType={selectedResumeType}
+        isDarkMode={isDarkMode}
+        language={language}
+      />
 
       <Footer isDarkMode={isDarkMode} language={language} />
     </div>
