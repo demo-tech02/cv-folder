@@ -300,6 +300,7 @@ export const CoverLetterPreview: React.FC = () => {
     setError('');
     setIsLoading(true);
     window.location.reload();
+    
   };
 
   return (
