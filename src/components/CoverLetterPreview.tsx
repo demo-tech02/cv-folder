@@ -256,13 +256,9 @@ export const CoverLetterPreview: React.FC = () => {
         const blob = new Blob([response.data], { type: 'application/pdf' });
         setPdfBlob(blob);
         const url = URL.createObjectURL(blob);
-        
-        // For mobile devices, especially iOS, we need to handle PDF viewing differently
-        if (isMobile) {
-          setPdfUrl(url);
-        } else {
-          setPdfUrl(`${url}#toolbar=0&navpanes=0&view=FitH`);
-        }
+
+        // Ensure proper handling for mobile devices
+        setPdfUrl(isMobile ? `${url}#toolbar=0` : `${url}#toolbar=0&navpanes=0&view=FitH`);
       } catch (error: any) {
         console.error('Error downloading cover letter:', error);
         
