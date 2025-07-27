@@ -367,6 +367,7 @@ export const CoverLetterPreview: React.FC = () => {
             src="${pdfUrl.split('#')[0]}#toolbar=0" 
             class="flex-grow w-full border-0"
           ></iframe>
+
         </body>
       </html>
     `);
@@ -381,6 +382,7 @@ export const CoverLetterPreview: React.FC = () => {
     navigate('/', { replace: true });
   };
 
+  
   const handleRetry = () => {
     setError('');
     setIsLoading(true);
