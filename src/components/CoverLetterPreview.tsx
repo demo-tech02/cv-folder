@@ -333,8 +333,9 @@ export const CoverLetterPreview: React.FC = () => {
 
   const openPdfInNewTab = () => {
     if (!pdfUrl) return;
-    
-    const newWindow = window.open(pdfUrl, '_blank');
+
+    const pdfUrlWithParams = `${pdfUrl.split('#')[0]}#toolbar=0`;
+    const newWindow = window.open(pdfUrlWithParams, '_blank');
     if (!newWindow) {
       toast.error(language === 'ar' 
         ? 'يرجى السماح للنوافذ المنبثقة لعرض الملف' 
