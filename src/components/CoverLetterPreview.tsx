@@ -7,6 +7,7 @@ import { Footer } from './Footer';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 import { Loader2, Download, Eye, ArrowLeft, FileText, AlertCircle, Smartphone, Monitor, ExternalLink } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
 
 interface LocationState {
   session_id: string;
@@ -189,6 +190,7 @@ export const CoverLetterPreview: React.FC = () => {
   const [isPaid, setIsPaid] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [pdfImages, setPdfImages] = useState<string[]>([]);
 
   useEffect(() => {
     setIsMobile(isMobileDevice());
@@ -333,9 +335,6 @@ export const CoverLetterPreview: React.FC = () => {
 
   const openPdfInNewTab = () => {
     if (!pdfUrl) return;
-
-    const pdfUrlWithParams = `${pdfUrl.split('#')[0]}#toolbar=0`;
-    const newWindow = window.open(pdfUrlWithParams, '_blank');
     if (!newWindow) {
       toast.error(language === 'ar' 
         ? 'يرجى السماح للنوافذ المنبثقة لعرض الملف' 
@@ -358,6 +357,33 @@ export const CoverLetterPreview: React.FC = () => {
     setIsLoading(true);
     window.location.reload();
   };
+
+  const renderPdfAsImages = async (blob: Blob) => {
+    try {
+      const pdf = await pdfjsLib.getDocument(URL.createObjectURL(blob)).promise;
+      const images: string[] = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: context!, viewport }).promise;
+        images.push(canvas.toDataURL());
+      }
+      setPdfImages(images);
+    } catch (error) {
+      console.error('Error rendering PDF as images:', error);
+      toast.error(language === 'ar' ? 'فشل في عرض ملف PDF كصور' : 'Failed to render PDF as images');
+    }
+  };
+
+  useEffect(() => {
+    if (isMobile && pdfBlob) {
+      renderPdfAsImages(pdfBlob);
+    }
+  }, [isMobile, pdfBlob]);
 
   return (
     <div
@@ -498,54 +524,24 @@ export const CoverLetterPreview: React.FC = () => {
                   : 'bg-white border border-gray-200 shadow-lg'
               }`}
             >
-              <div className="p-4 md:p-6 pb-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 md:w-6 md:h-6" />
-                    <h2 className="text-xl md:text-2xl font-bold">
-                      {language === 'ar' ? 'خطاب التغطية' : 'Cover Letter'}
-                    </h2>
-                  </div>
-                
-                </div>
-              </div>
               <div className="px-4 md:px-6 pb-4 md:pb-6">
                 {isMobile ? (
-                  // Mobile-specific PDF handling
-                  <div className={`w-full p-8 rounded-xl border-2 text-center transition-all duration-300 ${
-                    isDarkMode
-                      ? 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
-                      : 'border-gray-200 hover:border-gray-300 bg-gray-50'
-                  }`}>
-                    <FileText className="w-16 h-16 mx-auto mb-4 text-blue-500" />
-                    <h3 className="text-lg font-semibold mb-2">
-                      {language === 'ar' ? 'خطاب التغطية جاهز' : 'Cover Letter Ready'}
-                    </h3>
-                    <p className={`mb-6 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {language === 'ar' 
-                        ? 'اضغط على الأزرار أعلاه لعرض أو تحميل خطاب التغطية' 
-                        : 'Use the buttons above to view or download your cover letter'}
-                    </p>
-                    <div className="flex flex-col gap-3">
-                      <button
-                        onClick={openPdfInNewTab}
-                        className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        {language === 'ar' ? 'عرض الملف' : 'View File'}
-                      </button>
-                      <button
-                        onClick={downloadPdf}
-                        className={`w-full py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                          isDarkMode 
-                            ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                            : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                        }`}
-                      >
-                        <Download className="w-4 h-4" />
-                        {language === 'ar' ? 'تحميل الملف' : 'Download File'}
-                      </button>
-                    </div>
+                  // Mobile-specific PDF handling as images
+                  <div className="space-y-4">
+                    {pdfImages.length > 0 ? (
+                      pdfImages.map((src, index) => (
+                        <img
+                          key={index}
+                          src={src}
+                          alt={`Page ${index + 1}`}
+                          className="w-full rounded-lg shadow-md"
+                        />
+                      ))
+                    ) : (
+                      <p className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {language === 'ar' ? 'جاري تحميل الصور...' : 'Loading images...'}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   // Desktop iframe viewer
