@@ -333,33 +333,14 @@ export const CoverLetterPreview: React.FC = () => {
 
   const openPdfInNewTab = () => {
     if (!pdfUrl) return;
-
-    const newWindow = window.open('', '_blank');
+    
+    const newWindow = window.open(pdfUrl, '_blank');
     if (!newWindow) {
       toast.error(language === 'ar' 
         ? 'يرجى السماح للنوافذ المنبثقة لعرض الملف' 
         : 'Please allow pop-ups to view the file'
       );
-      return;
     }
-
-    // Add content to the new window
-    newWindow.document.write(`
-      <html>
-        <head>
-          <title>${language === 'ar' ? 'معاينة خطاب التغطية' : 'Cover Letter Preview'}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-        </head>
-        <body class="flex flex-col h-screen bg-black">
-          <button 
-            class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg m-4 w-20"
-            onclick="window.close()"
-          >
-            ${language === 'ar' ? 'العودة' : 'Back'}
-          </button>
-        </body>
-      </html>
-    `);
   };
 
   const handlePaymentSuccess = () => {
