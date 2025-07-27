@@ -349,12 +349,6 @@ export const CoverLetterPreview: React.FC = () => {
         <head>
           <title>${language === 'ar' ? 'معاينة خطاب التغطية' : 'Cover Letter Preview'}</title>
           <script src="https://cdn.tailwindcss.com"></script>
-          <style>
-            /* Hide the "Edit" button in the PDF viewer */
-            button[aria-label="Edit"] {
-              display: none !important;
-            }
-          </style>
         </head>
         <body class="flex flex-col h-screen bg-black">
           <button 
@@ -363,11 +357,6 @@ export const CoverLetterPreview: React.FC = () => {
           >
             ${language === 'ar' ? 'العودة' : 'Back'}
           </button>
-          <iframe 
-            src="${pdfUrl.split('#')[0]}#toolbar=0" 
-            class="flex-grow w-full border-0"
-          ></iframe>
-
         </body>
       </html>
     `);
@@ -382,7 +371,6 @@ export const CoverLetterPreview: React.FC = () => {
     navigate('/', { replace: true });
   };
 
-  
   const handleRetry = () => {
     setError('');
     setIsLoading(true);
