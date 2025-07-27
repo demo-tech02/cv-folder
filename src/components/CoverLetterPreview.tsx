@@ -256,9 +256,13 @@ export const CoverLetterPreview: React.FC = () => {
         const blob = new Blob([response.data], { type: 'application/pdf' });
         setPdfBlob(blob);
         const url = URL.createObjectURL(blob);
-
-        // Ensure proper handling for mobile devices
-        setPdfUrl(isMobile ? `${url}#toolbar=0` : `${url}#toolbar=0&navpanes=0&view=FitH`);
+        
+        // For mobile devices, especially iOS, we need to handle PDF viewing differently
+        if (isMobile) {
+          setPdfUrl(url);
+        } else {
+          setPdfUrl(`${url}#toolbar=0&navpanes=0&view=FitH`);
+        }
       } catch (error: any) {
         console.error('Error downloading cover letter:', error);
         
@@ -327,42 +331,53 @@ export const CoverLetterPreview: React.FC = () => {
     }, 2000);
   };
 
-  const openPdfInNewTab = () => {
-    if (!pdfUrl) return;
+const openPdfInNewTab = () => {
+  if (!pdfUrl) return;
 
-    // Create a new window with a back button and iframe
-    const newWindow = window.open('', '_blank');
-    if (!newWindow) {
-      toast.error(language === 'ar' 
-        ? 'يرجى السماح للنوافذ المنبثقة لعرض الملف' 
-        : 'Please allow pop-ups to view the file'
-      );
-      return;
-    }
+  // For iOS devices, we need to handle PDF viewing differently
+  if (isIOS()) {
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = pdfUrl.split('#')[0];
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return;
+  }
 
-    // Add content to the new window
-    newWindow.document.write(`
-      <html>
-        <head>
-          <title>${language === 'ar' ? 'معاينة خطاب التغطية' : 'Cover Letter Preview'}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-        </head>
-        <body class="flex flex-col h-screen bg-black">
-          <button 
-            class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg m-4 w-20"
-            onclick="window.close()"
-          >
-         
-            ${language === 'ar' ? 'العودة' : 'Back'}
-          </button>
-          <iframe 
-            src="${pdfUrl.split('#')[0]}#toolbar=0" 
-            class="flex-grow w-full border-0"
-          ></iframe>
-        </body>
-      </html>
-    `);
-  };
+  // For other devices, use the existing iframe approach
+  const newWindow = window.open('', '_blank');
+  if (!newWindow) {
+    toast.error(language === 'ar' 
+      ? 'يرجى السماح للنوافذ المنبثقة لعرض الملف' 
+      : 'Please allow pop-ups to view the file'
+    );
+    return;
+  }
+
+  newWindow.document.write(`
+    <html>
+      <head>
+        <title>${language === 'ar' ? 'معاينة خطاب التغطية' : 'Cover Letter Preview'}</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+      </head>
+      <body class="flex flex-col h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}">
+        <button 
+          class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg m-4 w-20"
+          onclick="window.close()"
+        >
+          ${language === 'ar' ? 'العودة' : 'Back'}
+        </button>
+        <iframe 
+          src="${pdfUrl.split('#')[0]}#toolbar=0" 
+          class="flex-grow w-full border-0"
+        ></iframe>
+      </body>
+    </html>
+  `);
+};
 
   const handlePaymentSuccess = () => {
     setIsPaid(true);
@@ -619,60 +634,57 @@ export const CoverLetterPreview: React.FC = () => {
                 </div>
               </div>
               <div className="px-4 md:px-6 pb-4 md:pb-6">
-                {isMobile ? (
-                  // Mobile-specific PDF handling
-                  <div className={`w-full p-8 rounded-xl border-2 text-center transition-all duration-300 ${
-                    isDarkMode
-                      ? 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
-                      : 'border-gray-200 hover:border-gray-300 bg-gray-50'
-                  }`}>
-                    <FileText className="w-16 h-16 mx-auto mb-4 text-blue-500" />
-                    <h3 className="text-lg font-semibold mb-2">
-                      {language === 'ar' ? 'خطاب التغطية جاهز' : 'Cover Letter Ready'}
-                    </h3>
-                    <p className={`mb-6 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {language === 'ar' 
-                        ? 'اضغط على الأزرار أعلاه لعرض أو تحميل خطاب التغطية' 
-                        : 'Use the buttons above to view or download your cover letter'}
-                    </p>
-                    <div className="flex flex-col gap-3">
-                      <button
-                        onClick={openPdfInNewTab}
-                        className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        {language === 'ar' ? 'عرض الملف' : 'View File'}
-                      </button>
-                      <button
-                        onClick={downloadPdf}
-                        className={`w-full py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                          isDarkMode 
-                            ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                            : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                        }`}
-                      >
-                        <Download className="w-4 h-4" />
-                        {language === 'ar' ? 'تحميل الملف' : 'Download File'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  // Desktop iframe viewer
-                  <div
-                    className={`w-full h-[600px] md:h-[800px] rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                      isDarkMode
-                        ? 'border-gray-700 hover:border-gray-600'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <iframe 
-                      src={pdfUrl} 
-                      className="w-full h-full border-0" 
-                      title="Cover Letter"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
+            {isMobile ? (
+  <div className={`w-full p-8 rounded-xl border-2 text-center transition-all duration-300 ${
+    isDarkMode
+      ? 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
+      : 'border-gray-200 hover:border-gray-300 bg-gray-50'
+  }`}>
+    <FileText className="w-16 h-16 mx-auto mb-4 text-blue-500" />
+    <h3 className="text-lg font-semibold mb-2">
+      {language === 'ar' ? 'خطاب التغطية جاهز' : 'Cover Letter Ready'}
+    </h3>
+    <p className={`mb-6 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+      {language === 'ar' 
+        ? 'اضغط على الأزرار أعلاه لعرض أو تحميل خطاب التغطية' 
+        : 'Use the buttons above to view or download your cover letter'}
+    </p>
+    <div className="flex flex-col gap-3">
+      <button
+        onClick={openPdfInNewTab}
+        className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+      >
+        <Eye className="w-4 h-4" />
+        {language === 'ar' ? 'عرض الملف' : 'View File'}
+      </button>
+      <button
+        onClick={downloadPdf}
+        className={`w-full py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+          isDarkMode 
+            ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+            : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+        }`}
+      >
+        <Download className="w-4 h-4" />
+        {language === 'ar' ? 'تحميل الملف' : 'Download File'}
+      </button>
+    </div>
+  </div>
+) : (
+  <div className={`w-full h-[600px] md:h-[800px] rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+    isDarkMode
+      ? 'border-gray-700 hover:border-gray-600'
+      : 'border-gray-200 hover:border-gray-300'
+  }`}>
+    <iframe 
+      src={pdfUrl} 
+      className="w-full h-full border-0" 
+      title="Cover Letter"
+      loading="lazy"
+    />
+  </div>
+)}
+         
               </div>
             </div>
           </div>
