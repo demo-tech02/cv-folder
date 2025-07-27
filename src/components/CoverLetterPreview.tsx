@@ -6,7 +6,7 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
-import { Loader2, Download, Eye, ArrowLeft, FileText, AlertCircle } from 'lucide-react';
+import { Loader2, Download, Eye, ArrowLeft, FileText, AlertCircle, Smartphone, Monitor, ExternalLink } from 'lucide-react';
 
 interface LocationState {
   session_id: string;
@@ -165,6 +165,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   );
 };
 
+// Mobile detection utility
+const isMobileDevice = (): boolean => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+         window.innerWidth < 768;
+};
+
+// iOS detection utility  
+const isIOS = (): boolean => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+};
+
 export const CoverLetterPreview: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -176,6 +187,12 @@ export const CoverLetterPreview: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   useEffect(() => {
     if (!state || !state.session_id || !state.cover_letter_filename) {
@@ -190,17 +207,21 @@ export const CoverLetterPreview: React.FC = () => {
 
   useEffect(() => {
     const downloadCoverLetter = async () => {
-      if (!state?.session_id) return;
-      
-      // Debug logging
-      console.log('Download state:', state);
-      console.log('Session ID:', state.session_id);
-      console.log('Cover letter filename:', state.cover_letter_filename);
-      
-      if (!state.cover_letter_filename || state.cover_letter_filename === 'undefined') {
+      if (!state?.session_id) {
         const errorMessage = language === 'ar' 
-          ? 'اسم ملف خطاب التغطية مفقود' 
-          : 'Cover letter filename is missing';
+          ? 'معرف الجلسة مفقود' 
+          : 'Session ID is missing';
+        setError(errorMessage);
+        toast.error(errorMessage);
+        navigate('/');
+        return;
+      }
+
+      // Better filename validation
+      if (!state.cover_letter_filename || state.cover_letter_filename === 'undefined' || state.cover_letter_filename === 'null') {
+        const errorMessage = language === 'ar' 
+          ? 'اسم ملف خطاب التغطية مفقود أو غير صالح' 
+          : 'Cover letter filename is missing or invalid';
         setError(errorMessage);
         toast.error(errorMessage);
         return;
@@ -210,42 +231,65 @@ export const CoverLetterPreview: React.FC = () => {
         setIsLoading(true);
         setError('');
         
-        const API_BASE_URL = 'https://ai.cvaluepro.com/cover/download';
+        const API_BASE_URL = 'https://13393172fc91.ngrok-free.app/download';
         
-        // Use 'filename' parameter as expected by the API
-        const downloadUrl = `${API_BASE_URL}?session_id=${state.session_id}&filename=${state.cover_letter_filename}`;
-        console.log('Download URL:', downloadUrl);
+        // Encode the filename to handle special characters
+        const encodedFilename = encodeURIComponent(state.cover_letter_filename);
+        const downloadUrl = `${API_BASE_URL}?session_id=${state.session_id}&filename=${encodedFilename}`;
+        
+        console.log('Attempting to download from:', downloadUrl);
 
         const response = await axios.get(downloadUrl, {
-            responseType: 'blob',
-            headers: {
-              Accept: 'application/pdf',
-            },
-            timeout: 30000,
+          responseType: 'blob',
+          headers: {
+            'Accept': 'application/pdf',
+            'ngrok-skip-browser-warning': 'true'
+          },
+          timeout: 30000,
         });
 
+        // Check if the response is actually a PDF
+        if (!response.headers['content-type'].includes('application/pdf')) {
+          throw new Error('Server did not return a PDF');
+        }
+
         const blob = new Blob([response.data], { type: 'application/pdf' });
+        setPdfBlob(blob);
         const url = URL.createObjectURL(blob);
-        setPdfUrl(`${url}#toolbar=0&navpanes=0&view=FitH`);
+        
+        // For mobile devices, especially iOS, we need to handle PDF viewing differently
+        if (isMobile) {
+          setPdfUrl(url);
+        } else {
+          setPdfUrl(`${url}#toolbar=0&navpanes=0&view=FitH`);
+        }
       } catch (error: any) {
         console.error('Error downloading cover letter:', error);
-        console.error('Error response:', error.response?.data);
         
-        let errorMessage = language === 'ar' ? 'حدث خطأ في تحميل خطاب التغطية' : 'Error loading cover letter';
+        // Try to read the error response if it's a blob
+        if (error.response?.data instanceof Blob) {
+          const errorData = await error.response.data.text();
+          console.error('Error response content:', errorData);
+        } else {
+          console.error('Error response:', error.response?.data);
+        }
         
-        if (error.response?.status === 422) {
-          console.error('422 Error details:', error.response.data);
+        let errorMessage = language === 'ar' 
+          ? 'حدث خطأ في تحميل خطاب التغطية' 
+          : 'Error loading cover letter';
+        
+        if (error.response?.status === 404) {
           errorMessage = language === 'ar' 
-            ? 'بيانات خطاب التغطية غير صحيحة أو اسم الملف مفقود'
-            : 'Invalid cover letter data or missing filename';
-        } else if (error.code === 'ECONNABORTED') {
-          errorMessage = language === 'ar'
-            ? 'انتهت مهلة الاتصال. يرجى المحاولة مرة أخرى.'
-            : 'Connection timeout. Please try again.';
-        } else if (error.response?.status >= 500) {
-          errorMessage = language === 'ar'
-            ? 'خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.'
-            : 'Server error. Please try again later.';
+            ? 'لم يتم العثور على ملف خطاب التغطية' 
+            : 'Cover letter file not found';
+        } else if (error.response?.status === 422) {
+          errorMessage = language === 'ar' 
+            ? 'بيانات غير صالحة لخطاب التغطية' 
+            : 'Invalid cover letter data';
+        } else if (error.message === 'Server did not return a PDF') {
+          errorMessage = language === 'ar' 
+            ? 'الملف الذي تم استلامه ليس ملف PDF صالحاً' 
+            : 'The received file is not a valid PDF';
         }
 
         setError(errorMessage);
@@ -262,7 +306,7 @@ export const CoverLetterPreview: React.FC = () => {
         URL.revokeObjectURL(pdfUrl.split('#')[0]);
       }
     };
-  }, [state, language]);
+  }, [state, language, isMobile]);
 
   const downloadPdf = () => {
     if (!isPaid) {
@@ -270,7 +314,7 @@ export const CoverLetterPreview: React.FC = () => {
       return;
     }
     
-    if (!pdfUrl) return;
+    if (!pdfUrl || !pdfBlob) return;
     
     const link = document.createElement('a');
     link.href = pdfUrl.split('#')[0];
@@ -287,6 +331,43 @@ export const CoverLetterPreview: React.FC = () => {
     }, 2000);
   };
 
+  const openPdfInNewTab = () => {
+    if (!pdfUrl) return;
+
+    // Create a new window with a back button and iframe
+    const newWindow = window.open('', '_blank');
+    if (!newWindow) {
+      toast.error(language === 'ar' 
+        ? 'يرجى السماح للنوافذ المنبثقة لعرض الملف' 
+        : 'Please allow pop-ups to view the file'
+      );
+      return;
+    }
+
+    // Add content to the new window
+    newWindow.document.write(`
+      <html>
+        <head>
+          <title>${language === 'ar' ? 'معاينة خطاب التغطية' : 'Cover Letter Preview'}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+        </head>
+        <body class="flex flex-col h-screen bg-black">
+          <button 
+            class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg m-4 w-20"
+            onclick="window.close()"
+          >
+         
+            ${language === 'ar' ? 'العودة' : 'Back'}
+          </button>
+          <iframe 
+            src="${pdfUrl.split('#')[0]}#toolbar=0" 
+            class="flex-grow w-full border-0"
+          ></iframe>
+        </body>
+      </html>
+    `);
+  };
+
   const handlePaymentSuccess = () => {
     setIsPaid(true);
     downloadPdf();
@@ -300,8 +381,73 @@ export const CoverLetterPreview: React.FC = () => {
     setError('');
     setIsLoading(true);
     window.location.reload();
-    
   };
+
+  useEffect(() => {
+    // Disable print screen key
+    const disablePrintScreen = (e: KeyboardEvent) => {
+      if (e.key === 'PrintScreen') {
+        e.preventDefault();
+        toast.error(language === 'ar' ? 'لقطة الشاشة غير مسموح بها' : 'Screenshots are not allowed');
+      }
+    };
+
+    // Detect screen recording
+    const detectScreenRecording = () => {
+      const interval = setInterval(() => {
+        if (document.hidden) {
+          toast.error(language === 'ar' ? 'تسجيل الشاشة غير مسموح به' : 'Screen recording is not allowed');
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    };
+
+    // Disable right-click context menu
+    const disableContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      toast.error(language === 'ar' ? 'النقر بزر الماوس الأيمن غير مسموح به' : 'Right-click is not allowed');
+    };
+
+    // Prevent screen capture using CSS for desktop view
+    const addScreenCaptureProtection = () => {
+      const style = document.createElement('style');
+      style.id = 'screen-capture-protection';
+      style.innerHTML = `
+        @media (min-width: 768px) {
+          body {
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+            user-select: none;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    };
+
+    // Remove screen capture protection CSS
+    const removeScreenCaptureProtection = () => {
+      const style = document.getElementById('screen-capture-protection');
+      if (style) {
+        document.head.removeChild(style);
+      }
+    };
+
+    // Add event listeners and CSS
+    window.addEventListener('keydown', disablePrintScreen);
+    document.addEventListener('contextmenu', disableContextMenu);
+    const stopDetection = detectScreenRecording();
+    addScreenCaptureProtection();
+
+    return () => {
+      // Cleanup event listeners and CSS
+      window.removeEventListener('keydown', disablePrintScreen);
+      document.removeEventListener('contextmenu', disableContextMenu);
+      stopDetection();
+      removeScreenCaptureProtection();
+    };
+  }, [language]);
 
   return (
     <div
@@ -318,9 +464,9 @@ export const CoverLetterPreview: React.FC = () => {
         toggleLanguage={toggleLanguage}
       />
 
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-8 pt-24">
         {/* Back Button */}
-        <div className="mt-10">
+        <div className="mb-6">
           <button
             onClick={handleBackClick}
             className={`group flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
@@ -335,41 +481,56 @@ export const CoverLetterPreview: React.FC = () => {
         </div>
 
         {/* Page Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Eye className="w-8 h-8" />
-            <h1 className="text-4xl font-bold">
+            <Eye className="w-6 h-6 md:w-8 md:h-8" />
+            <h1 className="text-2xl md:text-4xl font-bold">
               {language === 'ar' ? 'معاينة خطاب التغطية' : 'Cover Letter Preview'}
             </h1>
           </div>
-          <p className={`text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <p className={`text-base md:text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             {language === 'ar'
               ? 'معاينة وتحميل خطاب التغطية الخاص بك'
               : 'Preview and download your cover letter'}
           </p>
         </div>
 
+        {/* Device Type Indicator */}
+        {pdfUrl && !isLoading && !error && (
+          <div className={`mb-6 p-3 rounded-lg flex items-center gap-2 ${
+            isDarkMode ? 'bg-gray-800/50 text-gray-300' : 'bg-blue-50 text-blue-700'
+          }`}>
+            {isMobile ? <Smartphone className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
+            <span className="text-sm">
+              {isMobile 
+                ? (language === 'ar' ? 'جهاز محمول - انقر على "فتح في تبويب جديد" لأفضل عرض' : 'Mobile device - Click "Open in new tab" for best viewing')
+                : (language === 'ar' ? 'سطح المكتب - معاينة كاملة متاحة' : 'Desktop - Full preview available')
+              }
+            </span>
+          </div>
+        )}
+
         {/* Loading State */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div
-              className={`relative p-8 rounded-2xl ${
+              className={`relative p-6 md:p-8 rounded-2xl ${
                 isDarkMode ? 'bg-gray-900/50 border border-gray-800' : 'bg-white/80 border border-gray-200 shadow-xl'
               }`}
             >
               <div className="flex flex-col items-center">
                 <div className="relative">
-                  <Loader2 className="w-16 h-16 animate-spin text-blue-500" />
+                  <Loader2 className="w-12 h-12 md:w-16 md:h-16 animate-spin text-blue-500" />
                   <div
-                    className="absolute inset-0 w-16 h-16 rounded-full border-2 border-transparent border-t-blue-300 animate-spin"
+                    className="absolute inset-0 w-12 h-12 md:w-16 md:h-16 rounded-full border-2 border-transparent border-t-blue-300 animate-spin"
                     style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
                   />
                 </div>
                 <div className="mt-6 text-center">
-                  <h3 className="text-xl font-semibold mb-2">
+                  <h3 className="text-lg md:text-xl font-semibold mb-2">
                     {language === 'ar' ? 'جاري التحضير...' : 'Preparing Your Cover Letter...'}
                   </h3>
-                  <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className={`text-sm md:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {language === 'ar'
                       ? 'نقوم بإعداد خطاب التغطية الخاص بك'
                       : 'We\'re preparing your cover letter'}
@@ -384,18 +545,18 @@ export const CoverLetterPreview: React.FC = () => {
         {error && !isLoading && (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div
-              className={`relative p-8 rounded-2xl text-center ${
+              className={`relative p-6 md:p-8 rounded-2xl text-center ${
                 isDarkMode ? 'bg-red-900/20 border border-red-800' : 'bg-red-50 border border-red-200'
               }`}
             >
-              <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
-              <h3 className="text-xl font-semibold mb-2 text-red-600">
+              <AlertCircle className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 text-red-500" />
+              <h3 className="text-lg md:text-xl font-semibold mb-2 text-red-600">
                 {language === 'ar' ? 'حدث خطأ' : 'Error Occurred'}
               </h3>
-              <p className={`mb-6 ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>
+              <p className={`mb-6 text-sm md:text-base ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>
                 {error}
               </p>
-              <div className="flex gap-4 justify-center">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
                   onClick={handleRetry}
                   className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
@@ -419,7 +580,7 @@ export const CoverLetterPreview: React.FC = () => {
 
         {/* PDF Preview */}
         {pdfUrl && !isLoading && !error && (
-          <div className="max-w-4xl mx-auto">
+          <div className="w-full max-w-4xl mx-auto">
             <div
               className={`rounded-2xl overflow-hidden ${
                 isDarkMode
@@ -427,40 +588,95 @@ export const CoverLetterPreview: React.FC = () => {
                   : 'bg-white border border-gray-200 shadow-lg'
               }`}
             >
-              <div className="p-6 pb-4">
-                <div className="flex items-center justify-between mb-4">
+              <div className="p-4 md:p-6 pb-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                   <div className="flex items-center gap-3">
-                    <FileText className="w-6 h-6" />
-                    <h2 className="text-2xl font-bold">
+                    <FileText className="w-5 h-5 md:w-6 md:h-6" />
+                    <h2 className="text-xl md:text-2xl font-bold">
                       {language === 'ar' ? 'خطاب التغطية' : 'Cover Letter'}
                     </h2>
                   </div>
-                  <button
-                    onClick={downloadPdf}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 ${
-                      isDarkMode ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-800'
-                    }`}
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="font-medium">{language === 'ar' ? 'تحميل' : 'Download'}</span>
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    {isMobile && (
+                      <button
+                        onClick={openPdfInNewTab}
+                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+                          isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
+                        }`}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span className="font-medium text-sm">
+                          {language === 'ar' ? 'فتح في تبويب جديد' : 'Open in new tab'}
+                        </span>
+                      </button>
+                    )}
+                    <button
+                      onClick={downloadPdf}
+                      className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+                        isDarkMode ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-800'
+                      }`}
+                    >
+                      <Download className="w-4 h-4" />
+                      <span className="font-medium text-sm md:text-base">{language === 'ar' ? 'تحميل' : 'Download'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="px-6 pb-6">
-                <div
-                  className={`w-full h-[800px] rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+              <div className="px-4 md:px-6 pb-4 md:pb-6">
+                {isMobile ? (
+                  // Mobile-specific PDF handling
+                  <div className={`w-full p-8 rounded-xl border-2 text-center transition-all duration-300 ${
                     isDarkMode
-                      ? 'border-gray-700 hover:border-gray-600'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <iframe 
-                    src={pdfUrl} 
-                    className="w-full h-full border-0" 
-                    title="Cover Letter"
-                    loading="lazy"
-                  />
-                </div>
+                      ? 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
+                      : 'border-gray-200 hover:border-gray-300 bg-gray-50'
+                  }`}>
+                    <FileText className="w-16 h-16 mx-auto mb-4 text-blue-500" />
+                    <h3 className="text-lg font-semibold mb-2">
+                      {language === 'ar' ? 'خطاب التغطية جاهز' : 'Cover Letter Ready'}
+                    </h3>
+                    <p className={`mb-6 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {language === 'ar' 
+                        ? 'اضغط على الأزرار أعلاه لعرض أو تحميل خطاب التغطية' 
+                        : 'Use the buttons above to view or download your cover letter'}
+                    </p>
+                    <div className="flex flex-col gap-3">
+                      <button
+                        onClick={openPdfInNewTab}
+                        className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        {language === 'ar' ? 'عرض الملف' : 'View File'}
+                      </button>
+                      <button
+                        onClick={downloadPdf}
+                        className={`w-full py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                          isDarkMode 
+                            ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                            : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                        }`}
+                      >
+                        <Download className="w-4 h-4" />
+                        {language === 'ar' ? 'تحميل الملف' : 'Download File'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // Desktop iframe viewer
+                  <div
+                    className={`w-full h-[600px] md:h-[800px] rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+                      isDarkMode
+                        ? 'border-gray-700 hover:border-gray-600'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <iframe 
+                      src={pdfUrl} 
+                      className="w-full h-full border-0" 
+                      title="Cover Letter"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>

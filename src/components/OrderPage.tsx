@@ -133,7 +133,7 @@ export const OrderPage: React.FC = () => {
   };
 
   const generateCoverLetter = async (): Promise<UploadResponse> => {
-    const API_BASE_URL = 'https://ai.cvaluepro.com/cover';
+    const API_BASE_URL = 'https://13393172fc91.ngrok-free.app';
     
     const formDataToSend = new FormData();
     const file = uploadedFiles[0];
@@ -156,6 +156,7 @@ export const OrderPage: React.FC = () => {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'multipart/form-data',
+           "ngrok-skip-browser-warning": "true",
       },
       timeout: 120000, // 2 minutes timeout for cover letter generation
       onUploadProgress: (progressEvent) => {
@@ -336,7 +337,7 @@ export const OrderPage: React.FC = () => {
 
           {/* Service Info */}
           <div className="text-center mb-12">
-            <h1 className="text-3xl md:text-4xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-4xl font-bold mb-6 ">
               {serviceContent.title}
             </h1>
             <p className="text-lg opacity-80 max-w-3xl mx-auto">
