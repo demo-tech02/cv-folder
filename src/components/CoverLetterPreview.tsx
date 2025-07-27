@@ -333,14 +333,43 @@ export const CoverLetterPreview: React.FC = () => {
 
   const openPdfInNewTab = () => {
     if (!pdfUrl) return;
-    
-    const newWindow = window.open(pdfUrl, '_blank');
+
+    const newWindow = window.open('', '_blank');
     if (!newWindow) {
       toast.error(language === 'ar' 
         ? 'يرجى السماح للنوافذ المنبثقة لعرض الملف' 
         : 'Please allow pop-ups to view the file'
       );
+      return;
     }
+
+    // Add content to the new window
+    newWindow.document.write(`
+      <html>
+        <head>
+          <title>${language === 'ar' ? 'معاينة خطاب التغطية' : 'Cover Letter Preview'}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            /* Hide the "Edit" button in the PDF viewer */
+            button[aria-label="Edit"] {
+              display: none !important;
+            }
+          </style>
+        </head>
+        <body class="flex flex-col h-screen bg-black">
+          <button 
+            class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg m-4 w-20"
+            onclick="window.close()"
+          >
+            ${language === 'ar' ? 'العودة' : 'Back'}
+          </button>
+          <iframe 
+            src="${pdfUrl.split('#')[0]}#toolbar=0" 
+            class="flex-grow w-full border-0"
+          ></iframe>
+        </body>
+      </html>
+    `);
   };
 
   const handlePaymentSuccess = () => {
@@ -505,30 +534,7 @@ export const CoverLetterPreview: React.FC = () => {
                       {language === 'ar' ? 'خطاب التغطية' : 'Cover Letter'}
                     </h2>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    {isMobile && (
-                      <button
-                        onClick={openPdfInNewTab}
-                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 ${
-                          isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
-                        }`}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        <span className="font-medium text-sm">
-                          {language === 'ar' ? 'فتح في تبويب جديد' : 'Open in new tab'}
-                        </span>
-                      </button>
-                    )}
-                    <button
-                      onClick={downloadPdf}
-                      className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 ${
-                        isDarkMode ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-800'
-                      }`}
-                    >
-                      <Download className="w-4 h-4" />
-                      <span className="font-medium text-sm md:text-base">{language === 'ar' ? 'تحميل' : 'Download'}</span>
-                    </button>
-                  </div>
+                
                 </div>
               </div>
               <div className="px-4 md:px-6 pb-4 md:pb-6">
