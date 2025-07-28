@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -8,12 +7,6 @@ import { Footer } from './Footer';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 import { Loader2, Download, Eye, ArrowLeft, FileText, AlertCircle, Smartphone, Monitor, ExternalLink } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Configure pdfjs worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
-
 
 interface LocationState {
   session_id: string;
@@ -191,13 +184,11 @@ export const CoverLetterPreview: React.FC = () => {
   const { language, toggleLanguage } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
   const [pdfUrl, setPdfUrl] = useState<string>('');
-  const [pdfImages, setPdfImages] = useState<string[]>([]);
   const [error, setError] = useState<string>('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
-  const pdfContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsMobile(isMobileDevice());
@@ -214,73 +205,6 @@ export const CoverLetterPreview: React.FC = () => {
     }
   }, [state, navigate, language]);
 
-  const renderPdfAsImages = async (pdfBlob: Blob) => {
-    try {
-      const arrayBuffer = await pdfBlob.arrayBuffer();
-      
-      // Check if the PDF is valid
-      if (arrayBuffer.byteLength === 0) {
-        throw new Error('Empty PDF file received');
-      }
-
-      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-      
-      // Check if PDF has pages
-      if (pdf.numPages < 1) {
-        throw new Error('PDF has no pages');
-      }
-
-      const images: string[] = [];
-      const maxPagesToRender = 10; // Limit to prevent performance issues
-      
-      for (let i = 1; i <= Math.min(pdf.numPages, maxPagesToRender); i++) {
-        try {
-          const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 1.5 });
-          
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
-          if (!context) {
-            throw new Error('Could not get canvas context');
-          }
-
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-          
-          await page.render({
-            canvasContext: context,
-            viewport: viewport
-          }).promise;
-          
-          images.push(canvas.toDataURL('image/jpeg', 0.8));
-        } catch (pageError) {
-          console.error(`Error rendering page ${i}:`, pageError);
-          throw new Error(`Failed to render page ${i}`);
-        }
-      }
-      
-      if (images.length === 0) {
-        throw new Error('No pages were successfully rendered');
-      }
-      
-      setPdfImages(images);
-    } catch (error) {
-      console.error('Error rendering PDF as images:', error);
-      throw error;
-    }
-  };
-
-  const validatePdfBlob = (blob: Blob) => {
-    // Basic validation checks
-    if (blob.size === 0) {
-      throw new Error('Empty PDF file received');
-    }
-    if (blob.type !== 'application/pdf') {
-      throw new Error('File is not a PDF');
-    }
-    return true;
-  };
-
   useEffect(() => {
     const downloadCoverLetter = async () => {
       if (!state?.session_id) {
@@ -293,6 +217,7 @@ export const CoverLetterPreview: React.FC = () => {
         return;
       }
 
+      // Better filename validation
       if (!state.cover_letter_filename || state.cover_letter_filename === 'undefined' || state.cover_letter_filename === 'null') {
         const errorMessage = language === 'ar' 
           ? 'اسم ملف خطاب التغطية مفقود أو غير صالح' 
@@ -305,16 +230,15 @@ export const CoverLetterPreview: React.FC = () => {
       try {
         setIsLoading(true);
         setError('');
-        setPdfImages([]);
-        setPdfUrl('');
         
         const API_BASE_URL = 'https://13393172fc91.ngrok-free.app/download';
+        
+        // Encode the filename to handle special characters
         const encodedFilename = encodeURIComponent(state.cover_letter_filename);
         const downloadUrl = `${API_BASE_URL}?session_id=${state.session_id}&filename=${encodedFilename}`;
         
         console.log('Attempting to download from:', downloadUrl);
 
-        // Add timeout and response type checks
         const response = await axios.get(downloadUrl, {
           responseType: 'blob',
           headers: {
@@ -322,96 +246,52 @@ export const CoverLetterPreview: React.FC = () => {
             'ngrok-skip-browser-warning': 'true'
           },
           timeout: 30000,
-          validateStatus: (status) => status === 200
         });
 
-        // Verify response
-        if (!response.data) {
-          throw new Error('No data received from server');
+        // Check if the response is actually a PDF
+        if (!response.headers['content-type'].includes('application/pdf')) {
+          throw new Error('Server did not return a PDF');
         }
 
         const blob = new Blob([response.data], { type: 'application/pdf' });
-        
-        try {
-          validatePdfBlob(blob);
-        } catch (validationError) {
-          console.error('PDF validation failed:', validationError);
-          throw validationError;
-        }
-
         setPdfBlob(blob);
         const url = URL.createObjectURL(blob);
         
+        // For mobile devices, especially iOS, we need to handle PDF viewing differently
         if (isMobile) {
-          try {
-            await renderPdfAsImages(blob);
-          } catch (renderError) {
-            console.error('Failed to render PDF as images:', renderError);
-            // Fallback to regular PDF URL if image rendering fails
-            setPdfUrl(url);
-          }
+          setPdfUrl(url);
         } else {
           setPdfUrl(`${url}#toolbar=0&navpanes=0&view=FitH`);
         }
       } catch (error: any) {
         console.error('Error downloading cover letter:', error);
         
-        let errorDetails = '';
+        // Try to read the error response if it's a blob
+        if (error.response?.data instanceof Blob) {
+          const errorData = await error.response.data.text();
+          console.error('Error response content:', errorData);
+        } else {
+          console.error('Error response:', error.response?.data);
+        }
+        
         let errorMessage = language === 'ar' 
           ? 'حدث خطأ في تحميل خطاب التغطية' 
           : 'Error loading cover letter';
-
-        if (error.response) {
-          // Server responded with error status
-          errorDetails = `Status: ${error.response.status}`;
-          
-          if (error.response.status === 404) {
-            errorMessage = language === 'ar' 
-              ? 'لم يتم العثور على ملف خطاب التغطية' 
-              : 'Cover letter file not found';
-          } else if (error.response.status === 422) {
-            errorMessage = language === 'ar' 
-              ? 'بيانات غير صالحة لخطاب التغطية' 
-              : 'Invalid cover letter data';
-          } else if (error.response.status === 500) {
-            errorMessage = language === 'ar' 
-              ? 'خطأ في الخادم الداخلي' 
-              : 'Internal server error';
-          }
-          
-          // Try to get error message from response if it's JSON
-          if (error.response.data instanceof Blob) {
-            try {
-              const errorText = await error.response.data.text();
-              if (errorText) errorDetails += ` | ${errorText}`;
-            } catch (e) {
-              console.error('Error reading error response:', e);
-            }
-          }
-        } else if (error.request) {
-          // Request was made but no response received
-          errorDetails = 'No response from server';
+        
+        if (error.response?.status === 404) {
           errorMessage = language === 'ar' 
-            ? 'لا يوجد اتصال بالخادم' 
-            : 'No connection to server';
-        } else {
-          // Something happened in setting up the request
-          errorDetails = error.message;
+            ? 'لم يتم العثور على ملف خطاب التغطية' 
+            : 'Cover letter file not found';
+        } else if (error.response?.status === 422) {
+          errorMessage = language === 'ar' 
+            ? 'بيانات غير صالحة لخطاب التغطية' 
+            : 'Invalid cover letter data';
+        } else if (error.message === 'Server did not return a PDF') {
+          errorMessage = language === 'ar' 
+            ? 'الملف الذي تم استلامه ليس ملف PDF صالحاً' 
+            : 'The received file is not a valid PDF';
         }
 
-        if (error.message.includes('timeout')) {
-          errorMessage = language === 'ar' 
-            ? 'انتهت مهلة الطلب. يرجى التحقق من اتصال الشبكة' 
-            : 'Request timeout. Please check your network connection';
-        }
-
-        if (error.message.includes('Network Error')) {
-          errorMessage = language === 'ar' 
-            ? 'خطأ في الشبكة. يرجى التحقق من اتصال الإنترنت' 
-            : 'Network error. Please check your internet connection';
-        }
-
-        console.error('Error details:', errorDetails);
         setError(errorMessage);
         toast.error(errorMessage);
       } finally {
@@ -422,11 +302,11 @@ export const CoverLetterPreview: React.FC = () => {
     downloadCoverLetter();
 
     return () => {
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl.split('#')[0]);
-      pdfImages.forEach(img => URL.revokeObjectURL(img));
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl.split('#')[0]);
+      }
     };
   }, [state, language, isMobile]);
-
 
   const downloadPdf = () => {
     if (!isPaid) {
@@ -453,6 +333,7 @@ export const CoverLetterPreview: React.FC = () => {
 
   const openPdfInNewTab = () => {
     if (!pdfUrl) return;
+    
     const newWindow = window.open(pdfUrl, '_blank');
     if (!newWindow) {
       toast.error(language === 'ar' 
@@ -524,14 +405,14 @@ export const CoverLetterPreview: React.FC = () => {
         </div>
 
         {/* Device Type Indicator */}
-        {(pdfUrl || pdfImages.length > 0) && !isLoading && !error && (
+        {pdfUrl && !isLoading && !error && (
           <div className={`mb-6 p-3 rounded-lg flex items-center gap-2 ${
             isDarkMode ? 'bg-gray-800/50 text-gray-300' : 'bg-blue-50 text-blue-700'
           }`}>
             {isMobile ? <Smartphone className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
             <span className="text-sm">
               {isMobile 
-                ? (language === 'ar' ? 'جهاز محمول - عرض الصور لخطاب التغطية' : 'Mobile device - Viewing cover letter as images')
+                ? (language === 'ar' ? 'جهاز محمول - انقر على "فتح في تبويب جديد" لأفضل عرض' : 'Mobile device - Click "Open in new tab" for best viewing')
                 : (language === 'ar' ? 'سطح المكتب - معاينة كاملة متاحة' : 'Desktop - Full preview available')
               }
             </span>
@@ -607,7 +488,7 @@ export const CoverLetterPreview: React.FC = () => {
         )}
 
         {/* PDF Preview */}
-        {(pdfUrl || pdfImages.length > 0) && !isLoading && !error && (
+        {pdfUrl && !isLoading && !error && (
           <div className="w-full max-w-4xl mx-auto">
             <div
               className={`rounded-2xl overflow-hidden ${
@@ -624,51 +505,42 @@ export const CoverLetterPreview: React.FC = () => {
                       {language === 'ar' ? 'خطاب التغطية' : 'Cover Letter'}
                     </h2>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {isMobile ? (
-                      <button
-                        onClick={openPdfInNewTab}
-                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        <span>{language === 'ar' ? 'فتح في تبويب جديد' : 'Open in new tab'}</span>
-                      </button>
-                    ) : null}
-                    <button
-                      onClick={downloadPdf}
-                      className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                        isDarkMode
-                          ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                          : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                      }`}
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>{language === 'ar' ? 'تحميل' : 'Download'}</span>
-                    </button>
-                  </div>
+              
                 </div>
               </div>
               <div className="px-4 md:px-6 pb-4 md:pb-6">
                 {isMobile ? (
-                  // Mobile PDF as images
-                  <div 
-                    ref={pdfContainerRef}
-                    className={`w-full rounded-xl overflow-y-auto ${
-                      isDarkMode
-                        ? 'bg-gray-800 border border-gray-700'
-                        : 'bg-gray-100 border border-gray-200'
-                    }`}
-                    style={{ maxHeight: '70vh' }}
-                  >
-                    {pdfImages.map((img, index) => (
-                      <div key={index} className="mb-4 last:mb-0">
-                        <img 
-                          src={img} 
-                          alt={`Cover letter page ${index + 1}`}
-                          className="w-full h-auto border-b border-gray-300 last:border-b-0"
-                        />
-                      </div>
-                    ))}
+                  // Mobile-specific PDF handling
+                  <div className={`w-full p-8 rounded-xl border-2 text-center transition-all duration-300 ${
+                    isDarkMode
+                      ? 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
+                      : 'border-gray-200 hover:border-gray-300 bg-gray-50'
+                  }`}>
+                    <FileText className="w-16 h-16 mx-auto mb-4 text-blue-500" />
+                    <h3 className="text-lg font-semibold mb-2">
+                      {language === 'ar' ? 'خطاب التغطية جاهز' : 'Cover Letter Ready'}
+                    </h3>
+                  
+                    <div className="flex flex-col gap-3">
+                      <button
+                        onClick={openPdfInNewTab}
+                        className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        {language === 'ar' ? 'عرض الملف' : 'View File'}
+                      </button>
+                      <button
+                        onClick={downloadPdf}
+                        className={`w-full py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                          isDarkMode 
+                            ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                            : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                        }`}
+                      >
+                        <Download className="w-4 h-4" />
+                        {language === 'ar' ? 'تحميل الملف' : 'Download File'}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   // Desktop iframe viewer
