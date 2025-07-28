@@ -173,7 +173,7 @@ export const OrderPage: React.FC = () => {
   };
 
   const generateResume = async (): Promise<UploadResponse> => {
-    const API_BASE_URL = 'https://c96c42b5f820.ngrok-free.app';
+    const API_BASE_URL = 'https://13393172fc91.ngrok-free.app';
     
     // Health check first
     await axios.get(`${API_BASE_URL}/health-check`, {
