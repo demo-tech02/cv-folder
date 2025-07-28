@@ -2,14 +2,20 @@
 
 import type React from "react"
 import { useEffect, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
 import axios from "axios"
+import { useLocation, useNavigate } from "react-router-dom"
+
 import { toast } from "react-toastify"
 import { Header } from "./Header"
 import { Footer } from "./Footer"
 import { useTheme } from "../hooks/useTheme"
 import { useLanguage } from "../hooks/useLanguage"
-import { Loader2, Download, Eye, ArrowLeft, FileText, Sparkles, X, CreditCard, Lock, Shield } from "lucide-react"
+import { Loader2, Download, Eye, ArrowLeft, FileText, Sparkles, X, CreditCard, Lock, Shield, AlertCircle } from "lucide-react"
+// Mobile detection utility (copied from CoverLetterPreview.tsx)
+const isMobileDevice = (): boolean => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+         window.innerWidth < 1024; // match lg:hidden
+};
 
 interface LocationState {
   sessionId: string
@@ -337,7 +343,6 @@ export const PreviewPage: React.FC = () => {
   const state = location.state as LocationState
   const { isDarkMode, toggleDarkMode } = useTheme()
   const { language, toggleLanguage } = useLanguage()
-  const [isLoading, setIsLoading] = useState(true)
   const [classicPdfUrl, setClassicPdfUrl] = useState<string>("")
   const [modernPdfUrl, setModernPdfUrl] = useState<string>("")
   const [activePreview, setActivePreview] = useState<"classic" | "modern">("classic")
@@ -346,6 +351,18 @@ export const PreviewPage: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedResumeType, setSelectedResumeType] = useState<'classic' | 'modern'>('classic')
   const [paymentAmount] = useState(10) // Set your price here
+
+  // Mobile image preview state
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileImages, setMobileImages] = useState<string[] | null>(null)
+  const [mobileImageLoading, setMobileImageLoading] = useState(false)
+  const [mobileImageError, setMobileImageError] = useState<string>("")
+  // Full screen image modal state
+  const [fullScreenImg, setFullScreenImg] = useState<string | null>(null)
+  // Detect mobile on mount
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   // Screenshot and Screen Recording Protection
   useEffect(() => {
@@ -439,7 +456,7 @@ export const PreviewPage: React.FC = () => {
     })
 
     // Blur page when window loses focus (prevents screen recording)
-    let blurTimeout: NodeJS.Timeout
+    let blurTimeout: number
     const handleVisibilityChange = () => {
       if (document.hidden) {
         document.body.style.filter = 'blur(10px)'
@@ -493,7 +510,7 @@ export const PreviewPage: React.FC = () => {
   useEffect(() => {
     const downloadResumes = async () => {
       try {
-        const API_BASE_URL = "https://c96c42b5f820.ngrok-free.app"
+        const API_BASE_URL = "https://13393172fc91.ngrok-free.app"
 
         // Download Classic Resume
         const classicResponse = await axios.get(
@@ -528,11 +545,11 @@ export const PreviewPage: React.FC = () => {
         // Add parameters to hide PDF controls but allow scrolling
         setModernPdfUrl(`${modernUrl}#toolbar=0&navpanes=0&view=FitH`)
 
-        setIsLoading(false)
+        // setIsLoading(false) removed (no longer used)
       } catch (error) {
         console.error("Error downloading resumes:", error)
         toast.error(language === "ar" ? "حدث خطأ في تحميل السير الذاتية" : "Error loading resumes")
-        setIsLoading(false)
+        // setIsLoading(false) removed (no longer used)
       }
     }
 
@@ -557,10 +574,78 @@ export const PreviewPage: React.FC = () => {
     document.body.removeChild(link)
   }
 
+  // Fetch preview images for mobile automatically when activePreview or isMobile changes
+  useEffect(() => {
+    if (!isMobile) return;
+    setMobileImageError("");
+    setMobileImageLoading(true);
+    setMobileImages(null);
+    const fetchImages = async () => {
+      try {
+        const filename = activePreview === 'classic' ? state.classicResumeUrl : state.modernResumeUrl;
+        const API_BASE_URL = "https://13393172fc91.ngrok-free.app/images";
+        const response = await axios.post(
+          API_BASE_URL,
+          {
+            session_id: String(state.sessionId),
+            filenames: [filename],
+          },
+          {
+            headers: {
+              'ngrok-skip-browser-warning': 'true',
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000,
+            validateStatus: () => true // Always resolve, handle errors manually
+          }
+        );
+        // Debug: log the response
+        console.log('DEBUG /images API response:', response.data);
+        if (response.status === 404 || (response.data && response.data.detail && response.data.detail.includes('not found'))) {
+          setMobileImages([]);
+          setMobileImageError(language === 'ar' ? 'ملف السيرة الذاتية غير موجود للمعاينة' : 'Resume file not found for preview');
+          return;
+        }
+        let images: string[] | undefined;
+        if (Array.isArray(response.data)) {
+          images = response.data;
+        } else if (response.data && Array.isArray(response.data.images)) {
+          images = response.data.images;
+        } else if (Array.isArray(response.data["images"])) {
+          images = response.data["images"];
+        } else if (typeof response.data === 'object') {
+          // Try to extract any array of strings from the object
+          const arr = Object.values(response.data).find(v => Array.isArray(v) && v.every(i => typeof i === 'string'));
+          if (arr) images = arr as string[];
+        }
+        if (images && images.length > 0) {
+          setMobileImages(images);
+        } else {
+          setMobileImages([]);
+          setMobileImageError(
+            (language === 'ar' ? 'لم يتم العثور على صور المعاينة' : 'No preview images found')
+          );
+        }
+      } catch (error) {
+        setMobileImages([]);
+        setMobileImageError(
+          (language === 'ar' ? 'حدث خطأ أثناء تحميل الصور' : 'Error loading images')
+        );
+      } finally {
+        setMobileImageLoading(false);
+      }
+    };
+    fetchImages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePreview, isMobile, language, state.classicResumeUrl, state.modernResumeUrl, state.sessionId]);
+
+  // On desktop, Download shows payment modal as before
   const handleDownloadClick = (resumeType: 'classic' | 'modern') => {
-    setSelectedResumeType(resumeType)
-    setShowPaymentModal(true)
-  }
+    setSelectedResumeType(resumeType);
+    if (!isMobile) {
+      setShowPaymentModal(true);
+    }
+  };
 
   const handlePaymentSuccess = () => {
     const url = selectedResumeType === 'classic' ? classicPdfUrl : modernPdfUrl
@@ -638,242 +723,264 @@ export const PreviewPage: React.FC = () => {
           </p>
         </div>
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center min-h-[60vh]">
-            <div
-              className={`relative p-8 rounded-2xl ${
-                isDarkMode ? "bg-gray-900/50 border border-gray-800" : "bg-white/80 border border-gray-200 shadow-xl"
+        {/* Desktop View - Side by Side */}
+        <div className="hidden lg:grid lg:grid-cols-2 gap-8">
+          {/* Classic Resume */}
+          <div
+            className={`group relative rounded-2xl overflow-hidden transition-all duration-300 ${
+              isDarkMode
+                ? "bg-gray-900/50 border border-gray-800 hover:border-gray-700"
+                : "bg-white border border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl"
+            }`}
+          >
+            <div className="p-6 pb-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-6 h-6" />
+                  <h2 className="text-2xl font-bold">
+                    {language === "ar" ? "النموذج الكلاسيكي" : "Classic Template"}
+                  </h2>
+                </div>
+                <button
+                  onClick={() => handleDownloadClick('classic')}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
+                    isDarkMode ? "bg-white text-black hover:bg-gray-100" : "bg-black text-white hover:bg-gray-800"
+                  }`}
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
+                </button>
+              </div>
+              <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                {language === "ar"
+                  ? "تصميم أنيق ومهني للوظائف التقليدية"
+                  : "Clean and professional design for traditional roles"}
+              </p>
+            </div>
+            <div className="px-6 pb-6">
+              <div
+                className={`w-full h-[700px] rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+                  isDarkMode
+                    ? "border-gray-700 group-hover:border-gray-600"
+                    : "border-gray-200 group-hover:border-gray-300"
+                }`}
+              >
+                <iframe 
+                  src={classicPdfUrl} 
+                  className="w-full h-full border-0" 
+                  title="Classic Resume"
+                  style={{ pointerEvents: 'none', userSelect: 'none' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Modern Resume */}
+          <div
+            className={`group relative rounded-2xl overflow-hidden transition-all duration-300 ${
+              isDarkMode
+                ? "bg-gray-900/50 border border-gray-800 hover:border-gray-700"
+                : "bg-white border border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl"
+            }`}
+          >
+            <div className="p-6 pb-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-6 h-6" />
+                  <h2 className="text-2xl font-bold">{language === "ar" ? "النموذج العصري" : "Modern Template"}</h2>
+                </div>
+                <button
+                  onClick={() => handleDownloadClick('modern')}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
+                    isDarkMode ? "bg-white text-black hover:bg-gray-100" : "bg-black text-white hover:bg-gray-800"
+                  }`}
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
+                </button>
+              </div>
+              <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                {language === "ar"
+                  ? "تصميم معاصر وإبداعي للوظائف الحديثة"
+                  : "Contemporary and creative design for modern roles"}
+              </p>
+            </div>
+            <div className="px-6 pb-6">
+              <div
+                className={`w-full h-[700px] rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+                  isDarkMode
+                    ? "border-gray-700 group-hover:border-gray-600"
+                    : "border-gray-200 group-hover:border-gray-300"
+                }`}
+              >
+                <iframe 
+                  src={modernPdfUrl} 
+                  className="w-full h-full border-0" 
+                  title="Modern Resume"
+                  style={{ pointerEvents: 'none', userSelect: 'none' }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile/Tablet View - Tabbed Interface */}
+        <div className="lg:hidden">
+          {/* Tab Buttons */}
+          <div className={`flex rounded-xl p-1 mb-6 ${isDarkMode ? "bg-gray-900" : "bg-gray-100"}`}>
+            <button
+              onClick={() => setActivePreview("classic")}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                activePreview === "classic"
+                  ? isDarkMode
+                    ? "bg-white text-black shadow-lg"
+                    : "bg-black text-white shadow-lg"
+                  : isDarkMode
+                    ? "text-gray-400 hover:text-white"
+                    : "text-gray-600 hover:text-black"
               }`}
             >
-              <div className="flex flex-col items-center">
-                <div className="relative">
-                  <Loader2 className="w-16 h-16 animate-spin text-gray-400" />
-                  <div
-                    className="absolute inset-0 w-16 h-16 rounded-full border-2 border-transparent border-t-current animate-spin"
-                    style={{ animationDirection: "reverse", animationDuration: "1.5s" }}
-                  />
-                </div>
-                <div className="mt-6 text-center">
-                  <h3 className="text-xl font-semibold mb-2">
-                    {language === "ar" ? "جاري التحضير..." : "Preparing Your Resumes..."}
-                  </h3>
-                  <p className={`${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
-                    {language === "ar"
-                      ? "نقوم بإعداد سيرتك الذاتية بأفضل جودة"
-                      : "We're crafting your resumes with the highest quality"}
-                  </p>
-                </div>
+              <FileText className="w-4 h-4" />
+              <span>{language === "ar" ? "كلاسيكي" : "Classic"}</span>
+            </button>
+            <button
+              onClick={() => setActivePreview("modern")}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                activePreview === "modern"
+                  ? isDarkMode
+                    ? "bg-white text-black shadow-lg"
+                    : "bg-black text-white shadow-lg"
+                  : isDarkMode
+                    ? "text-gray-400 hover:text-white"
+                    : "text-gray-600 hover:text-black"
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>{language === "ar" ? "عصري" : "Modern"}</span>
+            </button>
+          </div>
+
+          {/* Mobile Image Preview Logic */}
+          <div className={`rounded-2xl overflow-hidden ${isDarkMode ? "bg-gray-900/50 border border-gray-800" : "bg-white border border-gray-200 shadow-lg"}`}>
+            <div className="p-6 pb-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">
+                  {activePreview === "classic"
+                    ? language === "ar"
+                      ? "النموذج الكلاسيكي"
+                      : "Classic Template"
+                    : language === "ar"
+                      ? "النموذج العصري"
+                      : "Modern Template"}
+                </h2>
+                <button
+                  onClick={() => handleDownloadClick(activePreview)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
+                    isDarkMode ? "bg-white text-black hover:bg-gray-100" : "bg-black text-white hover:bg-gray-800"
+                  }`}
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
+                </button>
+              </div>
+              <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                {activePreview === "classic"
+                  ? language === "ar"
+                    ? "تصميم أنيق ومهني للوظائف التقليدية"
+                    : "Clean and professional design for traditional roles"
+                  : language === "ar"
+                    ? "تصميم معاصر وإبداعي للوظائف الحديثة"
+                    : "Contemporary and creative design for modern roles"}
+              </p>
+            </div>
+            <div className="px-6 pb-6">
+              <div className={`w-full min-h-[300px] rounded-xl overflow-hidden border-2 ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
+                {/* Show loading, error, or images */}
+                {mobileImageLoading ? (
+                  <div className="flex flex-col items-center justify-center min-h-[200px]">
+                    <Loader2 className="w-12 h-12 animate-spin text-blue-500 mb-4" />
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {language === 'ar' ? 'جاري تحميل المعاينة...' : 'Loading preview...'}
+                    </p>
+                  </div>
+                ) : mobileImageError ? (
+                  <div className="flex flex-col items-center justify-center min-h-[200px]">
+                    <AlertCircle className="w-10 h-10 text-red-500 mb-2" />
+                    <p className={`text-sm ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>{mobileImageError}</p>
+                    <button
+                      onClick={() => {
+                        setMobileImageError("");
+                        setMobileImageLoading(true);
+                        setTimeout(() => fetchImages(), 100);
+                      }}
+                      className={`mt-4 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${isDarkMode ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-800'}`}
+                    >
+                      {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                    </button>
+                  </div>
+                ) : mobileImages && mobileImages.length > 0 ? (
+                  <div className="flex flex-col gap-4 items-center justify-center py-4">
+                    {mobileImages.map((img, idx) => (
+                      <img
+                        key={idx}
+                        src={img}
+                        alt="Resume Preview"
+                        className="w-full h-auto max-h-[60vh] object-contain rounded cursor-zoom-in"
+                        onClick={() => setFullScreenImg(img)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center min-h-[200px]">
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {language === 'ar' ? 'اضغط تحميل لعرض المعاينة' : 'Press Download to preview'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        ) : (
-          <div className="space-y-8">
-            {/* Desktop View - Side by Side */}
-            <div className="hidden lg:grid lg:grid-cols-2 gap-8">
-              {/* Classic Resume */}
-              <div
-                className={`group relative rounded-2xl overflow-hidden transition-all duration-300 ${
-                  isDarkMode
-                    ? "bg-gray-900/50 border border-gray-800 hover:border-gray-700"
-                    : "bg-white border border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl"
-                }`}
-              >
-                <div className="p-6 pb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-6 h-6" />
-                      <h2 className="text-2xl font-bold">
-                        {language === "ar" ? "النموذج الكلاسيكي" : "Classic Template"}
-                      </h2>
-                    </div>
-                    <button
-                      onClick={() => handleDownloadClick('classic')}
-                      className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
-                        isDarkMode ? "bg-white text-black hover:bg-gray-100" : "bg-black text-white hover:bg-gray-800"
-                      }`}
-                    >
-                      <Download className="w-4 h-4" />
-                      <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
-                    </button>
-                  </div>
-                  <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
-                    {language === "ar"
-                      ? "تصميم أنيق ومهني للوظائف التقليدية"
-                      : "Clean and professional design for traditional roles"}
-                  </p>
-                </div>
-                <div className="px-6 pb-6">
-                  <div
-                    className={`w-full h-[700px] rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                      isDarkMode
-                        ? "border-gray-700 group-hover:border-gray-600"
-                        : "border-gray-200 group-hover:border-gray-300"
-                    }`}
-                  >
-                    <iframe 
-                      src={classicPdfUrl} 
-                      className="w-full h-full border-0" 
-                      title="Classic Resume"
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Modern Resume */}
-              <div
-                className={`group relative rounded-2xl overflow-hidden transition-all duration-300 ${
-                  isDarkMode
-                    ? "bg-gray-900/50 border border-gray-800 hover:border-gray-700"
-                    : "bg-white border border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl"
-                }`}
-              >
-                <div className="p-6 pb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Sparkles className="w-6 h-6" />
-                      <h2 className="text-2xl font-bold">{language === "ar" ? "النموذج العصري" : "Modern Template"}</h2>
-                    </div>
-                    <button
-                      onClick={() => handleDownloadClick('modern')}
-                      className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
-                        isDarkMode ? "bg-white text-black hover:bg-gray-100" : "bg-black text-white hover:bg-gray-800"
-                      }`}
-                    >
-                      <Download className="w-4 h-4" />
-                      <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
-                    </button>
-                  </div>
-                  <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
-                    {language === "ar"
-                      ? "تصميم معاصر وإبداعي للوظائف الحديثة"
-                      : "Contemporary and creative design for modern roles"}
-                  </p>
-                </div>
-                <div className="px-6 pb-6">
-                  <div
-                    className={`w-full h-[700px] rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                      isDarkMode
-                        ? "border-gray-700 group-hover:border-gray-600"
-                        : "border-gray-200 group-hover:border-gray-300"
-                    }`}
-                  >
-                    <iframe 
-                      src={modernPdfUrl} 
-                      className="w-full h-full border-0" 
-                      title="Modern Resume"
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile/Tablet View - Tabbed Interface */}
-            <div className="lg:hidden">
-              {/* Tab Buttons */}
-              <div className={`flex rounded-xl p-1 mb-6 ${isDarkMode ? "bg-gray-900" : "bg-gray-100"}`}>
-                <button
-                  onClick={() => setActivePreview("classic")}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    activePreview === "classic"
-                      ? isDarkMode
-                        ? "bg-white text-black shadow-lg"
-                        : "bg-black text-white shadow-lg"
-                      : isDarkMode
-                        ? "text-gray-400 hover:text-white"
-                        : "text-gray-600 hover:text-black"
-                  }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>{language === "ar" ? "كلاسيكي" : "Classic"}</span>
-                </button>
-                <button
-                  onClick={() => setActivePreview("modern")}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    activePreview === "modern"
-                      ? isDarkMode
-                        ? "bg-white text-black shadow-lg"
-                        : "bg-black text-white shadow-lg"
-                      : isDarkMode
-                        ? "text-gray-400 hover:text-white"
-                        : "text-gray-600 hover:text-black"
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>{language === "ar" ? "عصري" : "Modern"}</span>
-                </button>
-              </div>
-
-              {/* Active Preview */}
-              <div
-                className={`rounded-2xl overflow-hidden ${
-                  isDarkMode ? "bg-gray-900/50 border border-gray-800" : "bg-white border border-gray-200 shadow-lg"
-                }`}
-              >
-                <div className="p-6 pb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold">
-                      {activePreview === "classic"
-                        ? language === "ar"
-                          ? "النموذج الكلاسيكي"
-                          : "Classic Template"
-                        : language === "ar"
-                          ? "النموذج العصري"
-                          : "Modern Template"}
-                    </h2>
-                    <button
-                      onClick={() => handleDownloadClick(activePreview)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
-                        isDarkMode ? "bg-white text-black hover:bg-gray-100" : "bg-black text-white hover:bg-gray-800"
-                      }`}
-                    >
-                      <Download className="w-4 h-4" />
-                      <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
-                    </button>
-                  </div>
-                  <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
-                    {activePreview === "classic"
-                      ? language === "ar"
-                        ? "تصميم أنيق ومهني للوظائف التقليدية"
-                        : "Clean and professional design for traditional roles"
-                      : language === "ar"
-                        ? "تصميم معاصر وإبداعي للوظائف الحديثة"
-                        : "Contemporary and creative design for modern roles"}
-                  </p>
-                </div>
-                <div className="px-6 pb-6">
-                  <div
-                    className={`w-full h-[600px] rounded-xl overflow-hidden border-2 ${
-                      isDarkMode ? "border-gray-700" : "border-gray-200"
-                    }`}
-                  >
-                    <iframe
-                      src={activePreview === "classic" ? classicPdfUrl : modernPdfUrl}
-                      className="w-full h-full border-0"
-                      title={`${activePreview} Resume`}
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </main>
 
-      {/* Payment Modal */}
-      <PaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        onPaymentSuccess={handlePaymentSuccess}
-        amount={paymentAmount}
-        resumeType={selectedResumeType}
-        isDarkMode={isDarkMode}
-        language={language}
-      />
+      {/* Full Screen Image Modal for Mobile */}
+      {fullScreenImg && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 backdrop-blur-sm"
+          onClick={() => setFullScreenImg(null)}
+        >
+          <img
+            src={fullScreenImg}
+            alt="Full Screen Resume Preview"
+            className="max-w-full max-h-full object-contain rounded shadow-2xl"
+            style={{ boxShadow: '0 0 40px 8px rgba(0,0,0,0.7)' }}
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full bg-black bg-opacity-60 hover:bg-opacity-80 text-white"
+            onClick={() => setFullScreenImg(null)}
+            aria-label="Close full screen preview"
+            style={{ zIndex: 60 }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
+
+      {/* Payment Modal (desktop only) */}
+      {!isMobile && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onPaymentSuccess={handlePaymentSuccess}
+          amount={paymentAmount}
+          resumeType={selectedResumeType}
+          isDarkMode={isDarkMode}
+          language={language}
+        />
+      )}
 
       <Footer isDarkMode={isDarkMode} language={language} />
     </div>
-  )
+  );
 }
