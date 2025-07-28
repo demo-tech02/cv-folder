@@ -362,8 +362,8 @@ export const CoverLetterPreview: React.FC = () => {
       }
       if (images && images.length > 0) {
         toast.success(String(language) === 'ar' ? 'تم جلب الصور بنجاح' : 'Images fetched successfully');
-        // Open a new tab and show the first image, full page, mobile friendly
-        const imgHtml = `<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width,initial-scale=1.0'><style>body{margin:0;padding:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#111;}img{width:100vw;height:100vh;object-fit:contain;display:block;}</style></head><body><img src='${images[0]}' alt='Image' /></body></html>`;
+        // Open a new tab and show the first image fullscreen, mobile optimized
+        const imgHtml = `<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no'><style>html,body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;background:#111;}body{display:flex;align-items:center;justify-content:center;}img{width:100vw;height:100vh;object-fit:contain;display:block;}</style></head><body><img src='${images[0]}' alt='Image' /></body></html>`;
         const newWindow = window.open();
         if (newWindow) {
           newWindow.document.write(imgHtml);
