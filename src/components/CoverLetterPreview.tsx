@@ -513,17 +513,23 @@ export function CoverLetterPreview() {
                   : 'bg-white border border-gray-200 shadow-lg'
               }`}
             >
-              <div className="p-4 md:p-6 pb-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 md:w-6 md:h-6" />
-                    <h2 className="text-xl md:text-2xl font-bold">
-                    {String(language) === 'ar' ? 'خطاب التغطية' : 'Cover Letter'}
-                    </h2>
-                  </div>
-              
-                </div>
-              </div>
+           <div className="p-4 md:p-6 pb-4">
+  <div className="flex sm:flex-row flex-col justify-between items-center gap-4 mb-4">
+    <div className="flex items-center gap-3">
+      <FileText className="w-5 h-5 md:w-6 md:h-6" />
+      <h2 className="text-xl md:text-2xl font-bold">
+        {String(language) === 'ar' ? 'خطاب التغطية' : 'Cover Letter'}
+      </h2>
+    </div>
+    <button
+      onClick={downloadPdf}
+      className="px-6 py-2 rounded-full bg-black text-white font-semibold shadow-lg opacity-90 hover:opacity-100 transition-all"
+      style={{ minWidth: '120px' }}
+    >
+      {String(language) === 'ar' ? 'تحميل الملف' : 'Download File'}
+    </button>
+  </div>
+</div>
               <div className="px-4 md:px-6 pb-4 md:pb-6">
                 {isMobile ? (
                   // Mobile-specific image preview with download button overlay
@@ -542,13 +548,7 @@ export function CoverLetterPreview() {
                     ) : mobileImageUrl ? (
                       <>
                         {/* Download button overlay */}
-                        <button
-                          onClick={downloadPdf}
-                          className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-6 py-2 rounded-full bg-black text-white font-semibold shadow-lg opacity-90 hover:opacity-100 transition-all"
-                          style={{ minWidth: '120px' }}
-                        >
-                          {String(language) === 'ar' ? 'تحميل الملف' : 'Download File'}
-                        </button>
+                       
                         <img src={mobileImageUrl} alt="Cover Letter Preview" className="w-full h-auto max-h-[60vh] object-contain rounded mb-4 mt-10" />
                         
                       </>
@@ -566,7 +566,6 @@ export function CoverLetterPreview() {
                     <iframe 
                       src={pdfUrl} 
                       className="w-full h-full border-0" 
-                      title="Cover Letter"
                       loading="lazy"
                     />
                   </div>
