@@ -550,14 +550,7 @@ export function CoverLetterPreview() {
                           {String(language) === 'ar' ? 'تحميل الملف' : 'Download File'}
                         </button>
                         <img src={mobileImageUrl} alt="Cover Letter Preview" className="w-full h-auto max-h-[60vh] object-contain rounded mb-4 mt-10" />
-                        <h3 className="text-lg font-semibold mb-2">
-                          {String(language) === 'ar' ? 'معاينة خطاب التغطية' : 'Cover Letter Preview'}
-                        </h3>
-                        <p className={`mb-6 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {String(language) === 'ar' 
-                            ? 'هذه معاينة للملف على الجوال' 
-                            : 'This is a mobile preview of your file'}
-                        </p>
+                        
                       </>
                     ) : null}
                   </div>
