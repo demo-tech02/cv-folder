@@ -176,7 +176,7 @@ const isIOS = (): boolean => {
   return /iPad|iPhone|iPod/.test(navigator.userAgent);
 };
 
-export const CoverLetterPreview: React.FC = () => {
+export function CoverLetterPreview() {
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state as LocationState;
@@ -189,10 +189,57 @@ export const CoverLetterPreview: React.FC = () => {
   const [isPaid, setIsPaid] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [mobileImageUrl, setMobileImageUrl] = useState<string | null>(null);
+  const [mobileImageLoading, setMobileImageLoading] = useState(false);
 
   useEffect(() => {
     setIsMobile(isMobileDevice());
   }, []);
+
+  // Fetch image for mobile preview
+  useEffect(() => {
+    if (isMobile && state?.session_id && state?.cover_letter_filename) {
+      setMobileImageLoading(true);
+      const fetchMobileImage = async () => {
+        try {
+          const API_BASE_URL = 'https://13393172fc91.ngrok-free.app/images';
+          const response = await axios.post(
+            API_BASE_URL,
+            {
+              session_id: String(state.session_id),
+              filename: state.cover_letter_filename
+            },
+            {
+              headers: {
+                'ngrok-skip-browser-warning': 'true',
+                'Content-Type': 'application/json'
+              },
+              timeout: 30000,
+            }
+          );
+          let images: string[] | undefined;
+          if (Array.isArray(response.data)) {
+            images = response.data;
+          } else if (response.data && Array.isArray(response.data.images)) {
+            images = response.data.images;
+          }
+          if (images && images.length > 0) {
+            setMobileImageUrl(images[0]);
+          } else {
+            setMobileImageUrl(null);
+          }
+        } catch (error) {
+          setMobileImageUrl(null);
+        } finally {
+          setMobileImageLoading(false);
+        }
+      };
+      fetchMobileImage();
+    } else {
+      setMobileImageUrl(null);
+      setMobileImageLoading(false);
+    }
+  }, [isMobile, state]);
 
   useEffect(() => {
     if (!state || !state.session_id || !state.cover_letter_filename) {
@@ -308,77 +355,26 @@ export const CoverLetterPreview: React.FC = () => {
     };
   }, [state, language, isMobile]);
 
-  const downloadPdf = () => {
+  const downloadPdf = async () => {
     if (!isPaid) {
       setShowPaymentModal(true);
       return;
     }
-    
+    // Download PDF for both mobile and desktop
     if (!pdfUrl || !pdfBlob) return;
-    
     const link = document.createElement('a');
     link.href = pdfUrl.split('#')[0];
     link.download = 'cover-letter.pdf';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
     toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File downloaded successfully');
-    
-    // Redirect to home after successful download
     setTimeout(() => {
       navigate('/', { replace: true });
     }, 2000);
   };
 
-  // Fetch images from /images API
-  const fetchImages = async () => {
-    if (!state?.session_id || !state?.cover_letter_filename) {
-      toast.error(String(language) === 'ar' ? 'بيانات مفقودة' : 'Missing data');
-      return;
-    }
-    try {
-      const API_BASE_URL = 'https://13393172fc91.ngrok-free.app/images';
-      const response = await axios.post(
-        API_BASE_URL,
-        {
-          session_id: String(state.session_id),
-          filename: state.cover_letter_filename
-        },
-        {
-          headers: {
-            'ngrok-skip-browser-warning': 'true',
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000,
-        }
-      );
-      console.log('Images API response:', response.data);
-      let images: string[] | undefined;
-      if (Array.isArray(response.data)) {
-        images = response.data;
-      } else if (response.data && Array.isArray(response.data.images)) {
-        images = response.data.images;
-      }
-      if (images && images.length > 0) {
-        toast.success(String(language) === 'ar' ? 'تم جلب الصور بنجاح' : 'Images fetched successfully');
-        // Open a new tab and show the first image fullscreen, mobile optimized
-        const imgHtml = `<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no'><style>html,body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;background:#111;}body{display:flex;align-items:center;justify-content:center;}img{width:100vw;height:100vh;object-fit:contain;display:block;}</style></head><body><img src='${images[0]}' alt='Image' /></body></html>`;
-        const newWindow = window.open();
-        if (newWindow) {
-          newWindow.document.write(imgHtml);
-          newWindow.document.close();
-        } else {
-          toast.error(String(language) === 'ar' ? 'يرجى السماح للنوافذ المنبثقة' : 'Please allow pop-ups');
-        }
-      } else {
-        toast.error(String(language) === 'ar' ? 'لا توجد صور للعرض' : 'No images to display');
-      }
-    } catch (error: any) {
-      toast.error(String(language) === 'ar' ? 'فشل في جلب الصور' : 'Failed to fetch images');
-      console.error('Fetch images error:', error);
-    }
-  };
+  // fetchImages removed, now handled in downloadPdf for mobile
 
   const handlePaymentSuccess = () => {
     setIsPaid(true);
@@ -440,23 +436,6 @@ export const CoverLetterPreview: React.FC = () => {
               : 'Preview and download your cover letter'}
           </p>
         </div>
-
-        {/* Device Type Indicator */}
-        {pdfUrl && !isLoading && !error && (
-          <div className={`mb-6 p-3 rounded-lg flex items-center gap-2 ${
-            isDarkMode ? 'bg-gray-800/50 text-gray-300' : 'bg-blue-50 text-blue-700'
-          }`}>
-            {isMobile ? <Smartphone className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
-            <span className="text-sm">
-              {isMobile 
-                ? (String(language) === 'ar' ? 'جهاز محمول - انقر على "فتح في تبويب جديد" لأفضل عرض' : 'Mobile device - Click "Open in new tab" for best viewing')
-                : (String(language) === 'ar' ? 'سطح المكتب - معاينة كاملة متاحة' : 'Desktop - Full preview available')
-              }
-            </span>
-          </div>
-        )}
-
-        {/* Loading State */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div
@@ -547,41 +526,40 @@ export const CoverLetterPreview: React.FC = () => {
               </div>
               <div className="px-4 md:px-6 pb-4 md:pb-6">
                 {isMobile ? (
-                  // Mobile-specific PDF handling
-                  <div className={`w-full p-8 rounded-xl border-2 text-center transition-all duration-300 ${
+                  // Mobile-specific image preview with download button overlay
+                  <div className={`relative w-full p-8 rounded-xl border-2 text-center transition-all duration-300 ${
                     isDarkMode
                       ? 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
                       : 'border-gray-200 hover:border-gray-300 bg-gray-50'
                   }`}>
-                    <FileText className="w-16 h-16 mx-auto mb-4 text-blue-500" />
-                    <h3 className="text-lg font-semibold mb-2">
-                      {String(language) === 'ar' ? 'خطاب التغطية جاهز' : 'Cover Letter Ready'}
-                    </h3>
-                    <p className={`mb-6 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {String(language) === 'ar' 
-                        ? 'اضغط على الأزرار أعلاه لعرض أو تحميل خطاب التغطية' 
-                        : 'Use the buttons above to view or download your cover letter'}
-                    </p>
-                    <div className="flex flex-col gap-3">
-                      <button
-                        onClick={fetchImages}
-                        className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        {String(language) === 'ar' ? 'عرض الملف' : 'View File'}
-                      </button>
-                      <button
-                        onClick={downloadPdf}
-                        className={`w-full py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                          isDarkMode 
-                            ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                            : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                        }`}
-                      >
-                        <Download className="w-4 h-4" />
-                        {String(language) === 'ar' ? 'تحميل الملف' : 'Download File'}
-                      </button>
-                    </div>
+                    {mobileImageLoading ? (
+                      <div className="flex flex-col items-center justify-center min-h-[200px]">
+                        <Loader2 className="w-12 h-12 animate-spin text-blue-500 mb-4" />
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {String(language) === 'ar' ? 'جاري تحميل المعاينة...' : 'Loading preview...'}
+                        </p>
+                      </div>
+                    ) : mobileImageUrl ? (
+                      <>
+                        {/* Download button overlay */}
+                        <button
+                          onClick={downloadPdf}
+                          className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-6 py-2 rounded-full bg-black text-white font-semibold shadow-lg opacity-90 hover:opacity-100 transition-all"
+                          style={{ minWidth: '120px' }}
+                        >
+                          {String(language) === 'ar' ? 'تحميل الملف' : 'Download File'}
+                        </button>
+                        <img src={mobileImageUrl} alt="Cover Letter Preview" className="w-full h-auto max-h-[60vh] object-contain rounded mb-4 mt-10" />
+                        <h3 className="text-lg font-semibold mb-2">
+                          {String(language) === 'ar' ? 'معاينة خطاب التغطية' : 'Cover Letter Preview'}
+                        </h3>
+                        <p className={`mb-6 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {String(language) === 'ar' 
+                            ? 'هذه معاينة للملف على الجوال' 
+                            : 'This is a mobile preview of your file'}
+                        </p>
+                      </>
+                    ) : null}
                   </div>
                 ) : (
                   // Desktop iframe viewer
@@ -613,10 +591,10 @@ export const CoverLetterPreview: React.FC = () => {
         onPaymentSuccess={handlePaymentSuccess}
         amount={10}
         isDarkMode={isDarkMode}
-        language={language}
+        language={typeof language === 'string' ? language : 'ar'}
       />
 
-      <Footer isDarkMode={isDarkMode} language={language} />
+      <Footer isDarkMode={isDarkMode} language={typeof language === 'string' ? language : 'ar'} />
     </div>
   );
 };
