@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useEffect, useState } from "react"
+import React, { useEffect, useState, useRef } from "react"
 import axios from "axios"
 import { useLocation, useNavigate } from "react-router-dom"
 
@@ -425,7 +424,7 @@ export const PreviewPage: React.FC = () => {
         (e.altKey && e.key === 'PrintScreen')
       ) {
         e.preventDefault()
-        toast.error(language === 'ar' ? 'هذا الإجراء غير مسموح' : 'This action is not allowed')
+        toast.error(String(language) === 'ar' ? 'هذا الإجراء غير مسموح' : 'This action is not allowed')
         return false
       }
     }
@@ -451,7 +450,7 @@ export const PreviewPage: React.FC = () => {
     // Disable print
     window.addEventListener('beforeprint', (e) => {
       e.preventDefault()
-      toast.error(language === 'ar' ? 'الطباعة غير مسموحة' : 'Printing is not allowed')
+      toast.error(String(language) === 'ar' ? 'الطباعة غير مسموحة' : 'Printing is not allowed')
       return false
     })
 
@@ -502,7 +501,7 @@ export const PreviewPage: React.FC = () => {
   // Redirect to home if no state is available
   useEffect(() => {
     if (!state || !state.sessionId) {
-      toast.error(language === "ar" ? "لم يتم العثور على معلومات السيرة الذاتية" : "Resume information not found")
+      toast.error(String(language) === "ar" ? "لم يتم العثور على معلومات السيرة الذاتية" : "Resume information not found")
       navigate("/")
     }
   }, [state, navigate, language])
@@ -548,7 +547,7 @@ export const PreviewPage: React.FC = () => {
         // setIsLoading(false) removed (no longer used)
       } catch (error) {
         console.error("Error downloading resumes:", error)
-        toast.error(language === "ar" ? "حدث خطأ في تحميل السير الذاتية" : "Error loading resumes")
+        toast.error(String(language) === "ar" ? "حدث خطأ في تحميل السير الذاتية" : "Error loading resumes")
         // setIsLoading(false) removed (no longer used)
       }
     }
@@ -575,6 +574,8 @@ export const PreviewPage: React.FC = () => {
   }
 
   // Fetch preview images for mobile automatically when activePreview or isMobile changes
+  // Move fetchImages to a ref so it can be called from retry button
+  const fetchImagesRef = React.useRef<() => void>(() => {});
   useEffect(() => {
     if (!isMobile) return;
     setMobileImageError("");
@@ -603,7 +604,7 @@ export const PreviewPage: React.FC = () => {
         console.log('DEBUG /images API response:', response.data);
         if (response.status === 404 || (response.data && response.data.detail && response.data.detail.includes('not found'))) {
           setMobileImages([]);
-          setMobileImageError(language === 'ar' ? 'ملف السيرة الذاتية غير موجود للمعاينة' : 'Resume file not found for preview');
+          setMobileImageError(String(language) === 'ar' ? 'ملف السيرة الذاتية غير موجود للمعاينة' : 'Resume file not found for preview');
           return;
         }
         let images: string[] | undefined;
@@ -623,53 +624,49 @@ export const PreviewPage: React.FC = () => {
         } else {
           setMobileImages([]);
           setMobileImageError(
-            (language === 'ar' ? 'لم يتم العثور على صور المعاينة' : 'No preview images found')
+            (String(language) === 'ar' ? 'لم يتم العثور على صور المعاينة' : 'No preview images found')
           );
         }
       } catch (error) {
         setMobileImages([]);
         setMobileImageError(
-          (language === 'ar' ? 'حدث خطأ أثناء تحميل الصور' : 'Error loading images')
+          (String(language) === 'ar' ? 'حدث خطأ أثناء تحميل الصور' : 'Error loading images')
         );
       } finally {
         setMobileImageLoading(false);
       }
     };
+    fetchImagesRef.current = fetchImages;
     fetchImages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePreview, isMobile, language, state.classicResumeUrl, state.modernResumeUrl, state.sessionId]);
 
-  // On desktop, Download shows payment modal as before
+
+  // On both desktop and mobile, show payment modal before download
   const handleDownloadClick = (resumeType: 'classic' | 'modern') => {
     setSelectedResumeType(resumeType);
-    if (!isMobile) {
-      setShowPaymentModal(true);
-    }
+    setShowPaymentModal(true);
   };
 
   const handlePaymentSuccess = () => {
-    const url = selectedResumeType === 'classic' ? classicPdfUrl : modernPdfUrl
-    const filename = `${selectedResumeType}-resume.pdf`
-    
-    // Download the file
-    downloadPdf(url, filename)
-    
-    // Show success message
-    toast.success(language === 'ar' ? 'تم الدفع بنجاح! جاري تحميل السيرة الذاتية...' : 'Payment successful! Downloading your resume...')
-    
+    // Always download PDF after payment, regardless of device
+    const url = selectedResumeType === 'classic' ? classicPdfUrl : modernPdfUrl;
+    const filename = `${selectedResumeType}-resume.pdf`;
+    downloadPdf(url, filename);
+    toast.success(String(language) === 'ar' ? 'تم الدفع بنجاح! جاري تحميل السيرة الذاتية...' : 'Payment successful! Downloading your resume...');
     // Redirect to home page after successful payment and download
     setTimeout(() => {
-      toast.success(language === 'ar' ? 'شكراً لك! ستتم إعادة توجيهك إلى الصفحة الرئيسية' : 'Thank you! Redirecting to home page...')
-      navigate("/", { replace: true })
-    }, 2000)
-  }
+      toast.success(String(language) === 'ar' ? 'شكراً لك! ستتم إعادة توجيهك إلى الصفحة الرئيسية' : 'Thank you! Redirecting to home page...');
+      navigate("/", { replace: true });
+    }, 2000);
+  };
 
   const handleBackClick = () => {
     navigate("/", { replace: true })
   }
 
   // Determine font family class based on language
-  const fontFamilyClass = language === "ar" ? "font-riwaya" : "font-hagrid"
+  const fontFamilyClass = String(language) === "ar" ? "font-riwaya" : "font-hagrid"
 
   return (
     <div
@@ -706,7 +703,7 @@ export const PreviewPage: React.FC = () => {
             }`}
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            <span className="font-medium">{language === "ar" ? "العودة" : "Back"}</span>
+            <span className="font-medium">{String(language) === "ar" ? "العودة" : "Back"}</span>
           </button>
         </div>
 
@@ -714,10 +711,10 @@ export const PreviewPage: React.FC = () => {
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Eye className="w-8 h-8" />
-            <h1 className="text-4xl font-bold">{language === "ar" ? "معاينة السيرة الذاتية" : "Resume Preview"}</h1>
+            <h1 className="text-4xl font-bold">{String(language) === "ar" ? "معاينة السيرة الذاتية" : "Resume Preview"}</h1>
           </div>
           <p className={`text-lg max-w-2xl mx-auto ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
-            {language === "ar"
+            {String(language) === "ar"
               ? "اختر النموذج المفضل لديك وقم بتحميله"
               : "Choose your preferred template and download it"}
           </p>
@@ -738,7 +735,7 @@ export const PreviewPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <FileText className="w-6 h-6" />
                   <h2 className="text-2xl font-bold">
-                    {language === "ar" ? "النموذج الكلاسيكي" : "Classic Template"}
+                    {String(language) === "ar" ? "النموذج الكلاسيكي" : "Classic Template"}
                   </h2>
                 </div>
                 <button
@@ -748,11 +745,11 @@ export const PreviewPage: React.FC = () => {
                   }`}
                 >
                   <Download className="w-4 h-4" />
-                  <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
+                  <span className="font-medium">{String(language) === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
                 </button>
               </div>
               <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
-                {language === "ar"
+                {String(language) === "ar"
                   ? "تصميم أنيق ومهني للوظائف التقليدية"
                   : "Clean and professional design for traditional roles"}
               </p>
@@ -787,7 +784,7 @@ export const PreviewPage: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <Sparkles className="w-6 h-6" />
-                  <h2 className="text-2xl font-bold">{language === "ar" ? "النموذج العصري" : "Modern Template"}</h2>
+                  <h2 className="text-2xl font-bold">{String(language) === "ar" ? "النموذج العصري" : "Modern Template"}</h2>
                 </div>
                 <button
                   onClick={() => handleDownloadClick('modern')}
@@ -796,11 +793,11 @@ export const PreviewPage: React.FC = () => {
                   }`}
                 >
                   <Download className="w-4 h-4" />
-                  <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
+                  <span className="font-medium">{String(language) === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
                 </button>
               </div>
               <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
-                {language === "ar"
+                {String(language) === "ar"
                   ? "تصميم معاصر وإبداعي للوظائف الحديثة"
                   : "Contemporary and creative design for modern roles"}
               </p>
@@ -841,7 +838,7 @@ export const PreviewPage: React.FC = () => {
               }`}
             >
               <FileText className="w-4 h-4" />
-              <span>{language === "ar" ? "كلاسيكي" : "Classic"}</span>
+              <span>{String(language) === "ar" ? "كلاسيكي" : "Classic"}</span>
             </button>
             <button
               onClick={() => setActivePreview("modern")}
@@ -856,7 +853,7 @@ export const PreviewPage: React.FC = () => {
               }`}
             >
               <Sparkles className="w-4 h-4" />
-              <span>{language === "ar" ? "عصري" : "Modern"}</span>
+              <span>{String(language) === "ar" ? "عصري" : "Modern"}</span>
             </button>
           </div>
 
@@ -866,10 +863,10 @@ export const PreviewPage: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold">
                   {activePreview === "classic"
-                    ? language === "ar"
+                    ? String(language) === "ar"
                       ? "النموذج الكلاسيكي"
                       : "Classic Template"
-                    : language === "ar"
+                    : String(language) === "ar"
                       ? "النموذج العصري"
                       : "Modern Template"}
                 </h2>
@@ -880,15 +877,15 @@ export const PreviewPage: React.FC = () => {
                   }`}
                 >
                   <Download className="w-4 h-4" />
-                  <span className="font-medium">{language === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
+                  <span className="font-medium">{String(language) === "ar" ? `تحميل - $${paymentAmount}` : `Download - $${paymentAmount}`}</span>
                 </button>
               </div>
               <p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
                 {activePreview === "classic"
-                  ? language === "ar"
+                  ? String(language) === "ar"
                     ? "تصميم أنيق ومهني للوظائف التقليدية"
                     : "Clean and professional design for traditional roles"
-                  : language === "ar"
+                  : String(language) === "ar"
                     ? "تصميم معاصر وإبداعي للوظائف الحديثة"
                     : "Contemporary and creative design for modern roles"}
               </p>
@@ -900,7 +897,7 @@ export const PreviewPage: React.FC = () => {
                   <div className="flex flex-col items-center justify-center min-h-[200px]">
                     <Loader2 className="w-12 h-12 animate-spin text-blue-500 mb-4" />
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {language === 'ar' ? 'جاري تحميل المعاينة...' : 'Loading preview...'}
+                      {String(language) === 'ar' ? 'جاري تحميل المعاينة...' : 'Loading preview...'}
                     </p>
                   </div>
                 ) : mobileImageError ? (
@@ -911,11 +908,11 @@ export const PreviewPage: React.FC = () => {
                       onClick={() => {
                         setMobileImageError("");
                         setMobileImageLoading(true);
-                        setTimeout(() => fetchImages(), 100);
+                        setTimeout(() => fetchImagesRef.current(), 100);
                       }}
                       className={`mt-4 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${isDarkMode ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-800'}`}
                     >
-                      {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                      {String(language) === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
                     </button>
                   </div>
                 ) : mobileImages && mobileImages.length > 0 ? (
@@ -933,7 +930,7 @@ export const PreviewPage: React.FC = () => {
                 ) : (
                   <div className="flex flex-col items-center justify-center min-h-[200px]">
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {language === 'ar' ? 'اضغط تحميل لعرض المعاينة' : 'Press Download to preview'}
+                      {String(language) === 'ar' ? 'اضغط تحميل لعرض المعاينة' : 'Press Download to preview'}
                     </p>
                   </div>
                 )}
@@ -967,18 +964,16 @@ export const PreviewPage: React.FC = () => {
         </div>
       )}
 
-      {/* Payment Modal (desktop only) */}
-      {!isMobile && (
-        <PaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
-          onPaymentSuccess={handlePaymentSuccess}
-          amount={paymentAmount}
-          resumeType={selectedResumeType}
-          isDarkMode={isDarkMode}
-          language={language}
-        />
-      )}
+      {/* Payment Modal (shown on both desktop and mobile) */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onPaymentSuccess={handlePaymentSuccess}
+        amount={paymentAmount}
+        resumeType={selectedResumeType}
+        isDarkMode={isDarkMode}
+        language={String(language)}
+      />
 
       <Footer isDarkMode={isDarkMode} language={language} />
     </div>
