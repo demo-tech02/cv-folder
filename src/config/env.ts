@@ -21,7 +21,7 @@ const getEnvVar = (key: string, defaultValue?: string): string => {
 
 export const env: EnvConfig = {
   API_BASE_URL: getEnvVar('VITE_API_BASE_URL', 'https://8a514a18a875.ngrok-free.app'),
-  IMAGES_API_URL: getEnvVar('VITE_IMAGES_API_URL', 'https://13393172fc91.ngrok-free.app'),
+  IMAGES_API_URL: getEnvVar('VITE_IMAGES_API_URL', 'https://8a514a18a875.ngrok-free.app'),
   ENVIRONMENT: (getEnvVar('VITE_ENVIRONMENT', 'development') as EnvConfig['ENVIRONMENT']),
   APP_NAME: getEnvVar('VITE_APP_NAME', 'CValue'),
   APP_VERSION: getEnvVar('VITE_APP_VERSION', '1.0.0'),
