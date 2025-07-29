@@ -6,6 +6,7 @@ import { MdPeopleAlt } from "react-icons/md";
 import { Content, Language } from '../types';
 
 interface DatabaseSectionProps {
+  
   content: Content['database'];
   isDarkMode: boolean;
   language: Language;
