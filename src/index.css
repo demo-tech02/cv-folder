@@ -57,7 +57,7 @@
 /* Ensure LTR layout is maintained */
 html[dir="ltr"] * {
   direction: ltr;
-  text-align: left;
+  text-align: center;
 }
 
 /* Override text alignment for Arabic content while maintaining LTR layout */

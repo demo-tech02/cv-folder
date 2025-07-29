@@ -27,9 +27,9 @@ export const useLanguage = () => {
     
     // Save to localStorage
     localStorage.setItem('language', language);
-    
-    // Update document title based on language
-    document.title = language === 'ar' ? 'CValue - تطوير المهن' : 'CValue - Career Development';
+    // ...existing code...
+    // document.title = language === 'ar' ? 'CValue - تطوير المهن' : 'CValue - Career Development';
+
   }, [language]);
 
   const toggleLanguage = () => {
