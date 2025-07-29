@@ -9,7 +9,6 @@ import { CoverLetterPreview } from './components/CoverLetterPreview';
 import { useTheme } from './hooks/useTheme';
 
 
-
 function App() {
   const { isDarkMode } = useTheme();
 
