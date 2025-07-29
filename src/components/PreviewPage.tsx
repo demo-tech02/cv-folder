@@ -7,14 +7,13 @@ import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "react-toastify"
 import { Header } from "./Header"
 import { Footer } from "./Footer"
-import { useTheme } from "../hooks/useTheme"
-import { useLanguage } from "../hooks/useLanguage"
+import { useTheme } from "../contexts/ThemeContext"
+import { useLanguage } from "../contexts/LanguageContext"
 import { Loader2, Download, Eye, ArrowLeft, FileText, Sparkles, X, CreditCard, Lock, Shield, AlertCircle } from "lucide-react"
-// Mobile detection utility (copied from CoverLetterPreview.tsx)
-const isMobileDevice = (): boolean => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-         window.innerWidth < 1024; // match lg:hidden
-};
+import { ResumeApiService } from "../apis"
+import { PaymentModal } from "./ui/PaymentModal"
+import { isMobileDevice, downloadFile, createObjectURL, revokeObjectURL } from "../utils/helpers"
+import { PAYMENT_CONFIG } from "../constants"
 
 interface LocationState {
   sessionId: string
@@ -22,319 +21,6 @@ interface LocationState {
   modernResumeUrl: string
 }
 
-// Tap Payment Modal Component
-interface PaymentModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onPaymentSuccess: () => void
-  amount: number
-  resumeType: 'classic' | 'modern'
-  isDarkMode: boolean
-  language: string
-}
-
-const PaymentModal: React.FC<PaymentModalProps> = ({
-  isOpen,
-  onClose,
-  onPaymentSuccess,
-  amount,
-  resumeType,
-  isDarkMode,
-  language
-}) => {
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [cardNumber, setCardNumber] = useState('')
-  const [expiryDate, setExpiryDate] = useState('')
-  const [cvv, setCvv] = useState('')
-  const [cardholderName, setCardholderName] = useState('')
-
-  // Format card number with spaces
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '')
-    const matches = v.match(/\d{4,16}/g)
-    const match = matches && matches[0] || ''
-    const parts = []
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4))
-    }
-    if (parts.length) {
-      return parts.join(' ')
-    } else {
-      return v
-    }
-  }
-
-  // Format expiry date MM/YY
-  const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '')
-    if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4)
-    }
-    return v
-  }
-
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCardNumber(e.target.value)
-    if (formatted.length <= 19) {
-      setCardNumber(formatted)
-    }
-  }
-
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatExpiryDate(e.target.value)
-    if (formatted.length <= 5) {
-      setExpiryDate(formatted)
-    }
-  }
-
-  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9]/g, '')
-    if (value.length <= 4) {
-      setCvv(value)
-    }
-  }
-
-  const processPayment = async () => {
-    if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
-      toast.error(language === 'ar' ? 'يرجى ملء جميع الحقول' : 'Please fill all fields')
-      return
-    }
-
-    // Basic card validation
-    const cardNumberClean = cardNumber.replace(/\s/g, '')
-    if (cardNumberClean.length < 13 || cardNumberClean.length > 19) {
-      toast.error(language === 'ar' ? 'رقم البطاقة غير صحيح' : 'Invalid card number')
-      return
-    }
-
-    const [expMonth, expYear] = expiryDate.split('/')
-    const currentDate = new Date()
-    const currentYear = currentDate.getFullYear() % 100
-    const currentMonth = currentDate.getMonth() + 1
-    
-    if (parseInt(expMonth) < 1 || parseInt(expMonth) > 12) {
-      toast.error(language === 'ar' ? 'تاريخ انتهاء البطاقة غير صحيح' : 'Invalid expiry date')
-      return
-    }
-    
-    if (parseInt(expYear) < currentYear || (parseInt(expYear) === currentYear && parseInt(expMonth) < currentMonth)) {
-      toast.error(language === 'ar' ? 'البطاقة منتهية الصلاحية' : 'Card has expired')
-      return
-    }
-
-    if (cvv.length < 3 || cvv.length > 4) {
-      toast.error(language === 'ar' ? 'رمز الأمان غير صحيح' : 'Invalid CVV')
-      return
-    }
-    setIsProcessing(true)
-
-    try {
-      // Simulate payment processing with realistic timing
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Simulate different payment scenarios based on card number
-      const lastDigit = cardNumberClean.slice(-1)
-      
-      // Simulate 90% success rate (fail only if last digit is 0)
-      if (lastDigit === '0') {
-        throw new Error('Payment declined by bank')
-      }
-      
-      // Simulate successful payment
-      toast.success(language === 'ar' ? 'تم الدفع بنجاح!' : 'Payment successful!')
-      onPaymentSuccess()
-      onClose()
-      
-      // Reset form
-      setCardNumber('')
-      setExpiryDate('')
-      setCvv('')
-      setCardholderName('')
-      
-    } catch (error) {
-      console.error('Payment error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Payment failed'
-      
-      if (errorMessage.includes('declined')) {
-        toast.error(language === 'ar' ? 'تم رفض الدفع من البنك' : 'Payment declined by bank')
-      } else {
-        toast.error(language === 'ar' ? 'فشل في الدفع. يرجى المحاولة مرة أخرى' : 'Payment failed. Please try again')
-      }
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  if (!isOpen) return null
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
-      <div className={`relative w-full max-w-md rounded-2xl p-6 shadow-2xl ${
-        isDarkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
-      }`}>
-        <button
-          onClick={onClose}
-          disabled={isProcessing}
-          className={`absolute top-4 right-4 p-2 rounded-lg transition-colors ${
-            isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-          }`}
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <CreditCard className="w-8 h-8 text-blue-600" />
-            <h2 className="text-2xl font-bold">
-              {language === 'ar' ? 'الدفع الآمن' : 'Secure Payment'}
-            </h2>
-          </div>
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            {language === 'ar' 
-              ? `دفع $${amount} لتحميل السيرة الذاتية ${resumeType === 'classic' ? 'الكلاسيكية' : 'العصرية'}`
-              : `Pay $${amount} to download your ${resumeType} resume`
-            }
-          </p>
-        </div>
-
-        <div className="space-y-4 mb-6">
-          {/* Cardholder Name */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              {language === 'ar' ? 'اسم حامل البطاقة' : 'Cardholder Name'}
-            </label>
-            <input
-              type="text"
-              value={cardholderName}
-              onChange={(e) => setCardholderName(e.target.value)}
-              disabled={isProcessing}
-              className={`w-full px-4 py-3 rounded-lg border transition-colors ${
-                isDarkMode 
-                  ? 'bg-gray-800 border-gray-700 text-white focus:border-blue-500' 
-                  : 'bg-white border-gray-300 text-black focus:border-blue-500'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20`}
-              placeholder={language === 'ar' ? 'أدخل اسم حامل البطاقة' : 'Enter cardholder name'}
-            />
-          </div>
-
-          {/* Card Number */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              {language === 'ar' ? 'رقم البطاقة' : 'Card Number'}
-            </label>
-            <input
-              type="text"
-              value={cardNumber}
-              onChange={handleCardNumberChange}
-              disabled={isProcessing}
-              className={`w-full px-4 py-3 rounded-lg border transition-colors ${
-                isDarkMode 
-                  ? 'bg-gray-800 border-gray-700 text-white focus:border-blue-500' 
-                  : 'bg-white border-gray-300 text-black focus:border-blue-500'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20`}
-              placeholder="1234 5678 9012 3456"
-            />
-          </div>
-
-          {/* Expiry and CVV */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                {language === 'ar' ? 'تاريخ الانتهاء' : 'Expiry Date'}
-              </label>
-              <input
-                type="text"
-                value={expiryDate}
-                onChange={handleExpiryChange}
-                disabled={isProcessing}
-                className={`w-full px-4 py-3 rounded-lg border transition-colors ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700 text-white focus:border-blue-500' 
-                    : 'bg-white border-gray-300 text-black focus:border-blue-500'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20`}
-                placeholder="MM/YY"
-              />
-            </div>
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                {language === 'ar' ? 'رمز الأمان' : 'CVV'}
-              </label>
-              <input
-                type="text"
-                value={cvv}
-                onChange={handleCvvChange}
-                disabled={isProcessing}
-                className={`w-full px-4 py-3 rounded-lg border transition-colors ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700 text-white focus:border-blue-500' 
-                    : 'bg-white border-gray-300 text-black focus:border-blue-500'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20`}
-                placeholder="123"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Security Info */}
-        <div className="flex items-center justify-center gap-2 mb-6 text-green-600">
-          <Shield className="w-4 h-4" />
-          <Lock className="w-4 h-4" />
-          <span className="text-sm font-medium">
-            {language === 'ar' ? 'محمي بتشفير SSL 256-bit' : '256-bit SSL Encrypted'}
-          </span>
-        </div>
-
-        {/* Supported Cards */}
-        <div className="flex justify-center gap-2 mb-6">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span>{language === 'ar' ? 'البطاقات المدعومة:' : 'Supported:'}</span>
-            <span className="font-semibold">VISA</span>
-            <span className="font-semibold">MasterCard</span>
-            <span className="font-semibold">AMEX</span>
-          </div>
-        </div>
-
-        {/* Pay Button */}
-        <button
-          onClick={processPayment}
-          disabled={isProcessing || !cardNumber || !expiryDate || !cvv || !cardholderName}
-          className={`w-full py-4 rounded-lg font-semibold text-white transition-all duration-200 ${
-            isProcessing || !cardNumber || !expiryDate || !cvv || !cardholderName
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform hover:scale-[1.02] active:scale-[0.98]'
-          }`}
-        >
-          {isProcessing ? (
-            <div className="flex items-center justify-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>{language === 'ar' ? 'جاري المعالجة...' : 'Processing...'}</span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center gap-2">
-              <CreditCard className="w-5 h-5" />
-              <span>{language === 'ar' ? `ادفع $${amount}` : `Pay $${amount}`}</span>
-            </div>
-          )}
-        </button>
-
-        {/* Processing Overlay */}
-        {isProcessing && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-2xl">
-            <div className="text-center text-white">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-              <p className="text-sm font-medium">
-                {language === 'ar' ? 'جاري معالجة الدفع...' : 'Processing payment...'}
-              </p>
-              <p className="text-xs opacity-75 mt-1">
-                {language === 'ar' ? 'يرجى عدم إغلاق هذه النافذة' : 'Please do not close this window'}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 export const PreviewPage: React.FC = () => {
   const location = useLocation()
@@ -349,7 +35,7 @@ export const PreviewPage: React.FC = () => {
   // Payment Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedResumeType, setSelectedResumeType] = useState<'classic' | 'modern'>('classic')
-  const [paymentAmount] = useState(10) // Set your price here
+  const [paymentAmount] = useState(PAYMENT_CONFIG.DEFAULT_AMOUNT)
 
   // Mobile image preview state
   const [isMobile, setIsMobile] = useState(false)
@@ -509,46 +195,29 @@ export const PreviewPage: React.FC = () => {
   useEffect(() => {
     const downloadResumes = async () => {
       try {
-        const API_BASE_URL = "https://8a514a18a875.ngrok-free.app"
-
         // Download Classic Resume
-        const classicResponse = await axios.get(
-          `${API_BASE_URL}/download?session_id=${state.sessionId}&filename=${state.classicResumeUrl}`,
-          {
-            responseType: "blob",
-            headers: {
-              "ngrok-skip-browser-warning": "true",
-              Accept: "application/pdf",
-            },
-          },
-        )
-
-        const classicBlob = new Blob([classicResponse.data], { type: "application/pdf" })
-        const classicUrl = URL.createObjectURL(classicBlob)
+        const classicBlob = await ResumeApiService.downloadResume({
+          session_id: state.sessionId,
+          filename: state.classicResumeUrl
+        });
+        
+        const classicUrl = createObjectURL(classicBlob);
         // Add parameters to hide PDF controls but allow scrolling
         setClassicPdfUrl(`${classicUrl}#toolbar=0&navpanes=0&view=FitH`)
 
         // Download Modern Resume
-        const modernResponse = await axios.get(
-          `${API_BASE_URL}/download?session_id=${state.sessionId}&filename=${state.modernResumeUrl}`,
-          {
-            responseType: "blob",
-            headers: {
-              "ngrok-skip-browser-warning": "true",
-              Accept: "application/pdf",
-            },
-          },
-        )
-        const modernBlob = new Blob([modernResponse.data], { type: "application/pdf" })
-        const modernUrl = URL.createObjectURL(modernBlob)
+        const modernBlob = await ResumeApiService.downloadResume({
+          session_id: state.sessionId,
+          filename: state.modernResumeUrl
+        });
+        
+        const modernUrl = createObjectURL(modernBlob);
         // Add parameters to hide PDF controls but allow scrolling
         setModernPdfUrl(`${modernUrl}#toolbar=0&navpanes=0&view=FitH`)
 
-        // setIsLoading(false) removed (no longer used)
       } catch (error) {
         console.error("Error downloading resumes:", error)
         toast.error(String(language) === "ar" ? "حدث خطأ في تحميل السير الذاتية" : "Error loading resumes")
-        // setIsLoading(false) removed (no longer used)
       }
     }
 
@@ -558,20 +227,11 @@ export const PreviewPage: React.FC = () => {
 
     // Cleanup function to revoke object URLs
     return () => {
-      if (classicPdfUrl) URL.revokeObjectURL(classicPdfUrl.split("#")[0])
-      if (modernPdfUrl) URL.revokeObjectURL(modernPdfUrl.split("#")[0])
+      if (classicPdfUrl) revokeObjectURL(classicPdfUrl.split("#")[0])
+      if (modernPdfUrl) revokeObjectURL(modernPdfUrl.split("#")[0])
     }
   }, [state])
 
-  const downloadPdf = (url: string, filename: string) => {
-    const link = document.createElement("a")
-    // Remove the hash parameters for download
-    link.href = url.split("#")[0]
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 
   // Fetch preview images for mobile automatically when activePreview or isMobile changes
   // Move fetchImages to a ref so it can be called from retry button
@@ -584,54 +244,28 @@ export const PreviewPage: React.FC = () => {
     const fetchImages = async () => {
       try {
         const filename = activePreview === 'classic' ? state.classicResumeUrl : state.modernResumeUrl;
-        const API_BASE_URL = "https://8a514a18a875.ngrok-free.app/images";
-        const response = await axios.post(
-          API_BASE_URL,
-          {
-            session_id: String(state.sessionId),
-            filenames: [filename],
-          },
-          {
-            headers: {
-              'ngrok-skip-browser-warning': 'true',
-              'Content-Type': 'application/json',
-            },
-            timeout: 30000,
-            validateStatus: () => true // Always resolve, handle errors manually
-          }
-        );
-        // Debug: log the response
-        console.log('DEBUG /images API response:', response.data);
-        if (response.status === 404 || (response.data && response.data.detail && response.data.detail.includes('not found'))) {
-          setMobileImages([]);
-          setMobileImageError(String(language) === 'ar' ? 'ملف السيرة الذاتية غير موجود للمعاينة' : 'Resume file not found for preview');
-          return;
-        }
-        let images: string[] | undefined;
-        if (Array.isArray(response.data)) {
-          images = response.data;
-        } else if (response.data && Array.isArray(response.data.images)) {
-          images = response.data.images;
-        } else if (Array.isArray(response.data["images"])) {
-          images = response.data["images"];
-        } else if (typeof response.data === 'object') {
-          // Try to extract any array of strings from the object
-          const arr = Object.values(response.data).find(v => Array.isArray(v) && v.every(i => typeof i === 'string'));
-          if (arr) images = arr as string[];
-        }
-        if (images && images.length > 0) {
-          setMobileImages(images);
-        } else {
-          setMobileImages([]);
+        
+        const images = await ResumeApiService.getResumeImages(state.sessionId, [filename]);
+        setMobileImages(images);
+      } catch (error) {
+        console.error('Error fetching images:', error);
+        setMobileImages([]);
+        
+        if (error instanceof Error) {
           setMobileImageError(
-            (String(language) === 'ar' ? 'لم يتم العثور على صور المعاينة' : 'No preview images found')
+            String(language) === 'ar' 
+              ? error.message.includes('not found') 
+                ? 'ملف السيرة الذاتية غير موجود للمعاينة' 
+                : 'حدث خطأ أثناء تحميل الصور'
+              : error.message.includes('not found')
+                ? 'Resume file not found for preview'
+                : 'Error loading images'
+          );
+        } else {
+          setMobileImageError(
+            String(language) === 'ar' ? 'حدث خطأ أثناء تحميل الصور' : 'Error loading images'
           );
         }
-      } catch (error) {
-        setMobileImages([]);
-        setMobileImageError(
-          (String(language) === 'ar' ? 'حدث خطأ أثناء تحميل الصور' : 'Error loading images')
-        );
       } finally {
         setMobileImageLoading(false);
       }
@@ -652,7 +286,7 @@ export const PreviewPage: React.FC = () => {
     // Always download PDF after payment, regardless of device
     const url = selectedResumeType === 'classic' ? classicPdfUrl : modernPdfUrl;
     const filename = `${selectedResumeType}-resume.pdf`;
-    downloadPdf(url, filename);
+    downloadFile(url, filename);
     toast.success(String(language) === 'ar' ? 'تم الدفع بنجاح! جاري تحميل السيرة الذاتية...' : 'Payment successful! Downloading your resume...');
     // Redirect to home page after successful payment and download
     setTimeout(() => {

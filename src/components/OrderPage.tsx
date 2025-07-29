@@ -6,18 +6,14 @@ import axios from 'axios';
 import { Upload, X, FileText, CheckCircle, ArrowLeft, Briefcase, MapPin, User, FileIcon } from 'lucide-react';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { useTheme } from '../hooks/useTheme';
-import { useLanguage } from '../hooks/useLanguage';
+import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { content } from '../data/content';
+import { ResumeApiService, CoverLetterApiService } from '../apis';
+import { validateFile, validateCoverLetterForm } from '../utils/validation';
+import { SERVICE_TYPES } from '../constants';
 
-interface UploadResponse {
-  session_id: string;
-  classic_resume_url?: string;
-  modern_resume_url?: string;
-  file_name?: string;
-}
-
-interface FormData {
+interface CoverLetterFormData {
   company: string;
   location: string;
   jobTitle: string;
@@ -34,7 +30,7 @@ export const OrderPage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   
   // Cover letter form data
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<CoverLetterFormData>({
     company: '',
     location: '',
     jobTitle: '',
@@ -58,31 +54,16 @@ export const OrderPage: React.FC = () => {
     }
   };
 
-  const validateFile = (file: File): boolean => {
-    const validTypes = ['application/pdf'];
-    const maxSize = 30 * 1024 * 1024; // 30MB
-    
-    if (!validTypes.includes(file.type)) {
-      toast.error(language === 'ar' 
-        ? `نوع ملف غير صالح: ${file.name}. يرجى رفع ملفات PDF فقط.`
-        : `Invalid file type: ${file.name}. Please upload PDF files only.`
-      );
-      return false;
-    }
-    
-    if (file.size > maxSize) {
-      toast.error(language === 'ar'
-        ? `الملف كبير جداً: ${file.name}. الحد الأقصى للحجم هو 30 ميجابايت.`
-        : `File too large: ${file.name}. Maximum size is 30MB.`
-      );
-      return false;
-    }
-    
-    return true;
-  };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const validFiles = acceptedFiles.filter(validateFile);
+    const validFiles = acceptedFiles.filter(file => {
+      const validation = validateFile(file);
+      if (!validation.isValid) {
+        toast.error(language === 'ar' ? validation.error : validation.error);
+        return false;
+      }
+      return true;
+    });
 
     if (validFiles.length > 0) {
       setUploadedFiles(prev => [...prev, ...validFiles]);
@@ -106,105 +87,10 @@ export const OrderPage: React.FC = () => {
     toast.info(language === 'ar' ? 'تم حذف الملف' : 'File removed');
   };
 
-  const handleFormChange = (field: keyof FormData, value: string) => {
+  const handleFormChange = (field: keyof CoverLetterFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const validateCoverLetterForm = (): boolean => {
-    const { company, location, jobTitle, jobDescription } = formData;
-    
-    if (!company.trim() || !location.trim() || !jobTitle.trim() || !jobDescription.trim()) {
-      toast.error(language === 'ar'
-        ? 'يرجى ملء جميع حقول الوظيفة.'
-        : 'Please fill in all job details fields.'
-      );
-      return false;
-    }
-    
-    if (jobDescription.length < 50) {
-      toast.error(language === 'ar'
-        ? 'يجب أن يكون وصف الوظيفة أكثر من 50 حرف.'
-        : 'Job description must be at least 50 characters long.'
-      );
-      return false;
-    }
-    
-    return true;
-  };
-
-  const generateCoverLetter = async (): Promise<UploadResponse> => {
-    const API_BASE_URL = 'https://8a514a18a875.ngrok-free.app';
-    
-    const formDataToSend = new FormData();
-    const file = uploadedFiles[0];
-    
-    formDataToSend.append('file', file, file.name);
-    formDataToSend.append('company', formData.company);
-    formDataToSend.append('location', formData.location);
-    formDataToSend.append('job_title', formData.jobTitle);
-    formDataToSend.append('job_description', formData.jobDescription);
-    
-    // Debug logging
-    console.log('Sending cover letter generation request with:');
-    console.log('File:', file.name);
-    console.log('Company:', formData.company);
-    console.log('Location:', formData.location);
-    console.log('Job Title:', formData.jobTitle);
-    console.log('Job Description length:', formData.jobDescription.length);
-
-    const response = await axios.post(`${API_BASE_URL}/generate-cover-letter`, formDataToSend, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'multipart/form-data',
-           "ngrok-skip-browser-warning": "true",
-      },
-      timeout: 120000, // 2 minutes timeout for cover letter generation
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(progress);
-        }
-      },
-    });
-    
-    console.log('Cover letter generation response:', response.data);
-
-    return response.data;
-  };
-
-  const generateResume = async (): Promise<UploadResponse> => {
-    const API_BASE_URL = 'https://8a514a18a875.ngrok-free.app';
-    
-    // Health check first
-    await axios.get(`${API_BASE_URL}/health-check`, {
-      headers: {
-        'ngrok-skip-browser-warning': 'true',
-        'Accept': 'application/json'
-      },
-      timeout: 10000
-    });
-
-    const formDataToSend = new FormData();
-    const file = uploadedFiles[0];
-    formDataToSend.append('file', file, file.name);
-
-    const response = await axios.post(`${API_BASE_URL}/upload-resume`, formDataToSend, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'multipart/form-data',
-        'ngrok-skip-browser-warning': 'true',
-      },
-      timeout: 60000,
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(progress);
-        }
-      },
-    });
-
-    return response.data;
-  };
 
   const handleUpload = async () => {
     if (uploadedFiles.length === 0) {
@@ -215,7 +101,15 @@ export const OrderPage: React.FC = () => {
       return;
     }
 
-    if (serviceType === 'cover-letter' && !validateCoverLetterForm()) {
+    if (serviceType === SERVICE_TYPES.COVER_LETTER) {
+      const validation = validateCoverLetterForm(formData);
+      if (!validation.isValid) {
+        toast.error(language === 'ar' ? validation.error : validation.error);
+        return;
+      }
+    }
+
+    if (serviceType === SERVICE_TYPES.COVER_LETTER && !validateCoverLetterForm(formData).isValid) {
       return;
     }
 
@@ -223,12 +117,13 @@ export const OrderPage: React.FC = () => {
     setUploadProgress(0);
     
     try {
-      let responseData: UploadResponse;
-
-      if (serviceType === 'cover-letter') {
-        responseData = await generateCoverLetter();
+      if (serviceType === SERVICE_TYPES.COVER_LETTER) {
+        const responseData = await CoverLetterApiService.generateCoverLetter(
+          uploadedFiles[0],
+          formData,
+          setUploadProgress
+        );
         
-        // Log the response to debug the filename issue
         console.log('Cover letter generation response:', responseData);
         
         navigate('/cover-letter-preview', {
@@ -238,7 +133,10 @@ export const OrderPage: React.FC = () => {
           }
         });
       } else {
-        responseData = await generateResume();
+        const responseData = await ResumeApiService.uploadResume(
+          uploadedFiles[0],
+          setUploadProgress
+        );
         
         navigate('/preview', {
           state: {
@@ -260,23 +158,16 @@ export const OrderPage: React.FC = () => {
         ? 'فشل في الرفع. يرجى المحاولة مرة أخرى.' 
         : 'Upload failed. Please try again.';
 
-      if (axios.isAxiosError(error)) {
-        if (error.code === 'ECONNREFUSED') {
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('ECONNREFUSED')) {
           errorMessage = language === 'ar'
             ? 'لا يمكن الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت الخاص بك.'
             : 'Cannot connect to server. Please check your internet connection.';
-        } else if (error.code === 'ECONNABORTED') {
+        } else if (error.message.includes('timeout')) {
           errorMessage = language === 'ar'
             ? 'انتهت مهلة الاتصال. يرجى المحاولة مرة أخرى.'
             : 'Connection timeout. Please try again.';
-        } else if (error.response?.status === 422) {
-          errorMessage = language === 'ar'
-            ? 'البيانات المرسلة غير صحيحة. يرجى التحقق من الملف والمعلومات.'
-            : 'Invalid data provided. Please check your file and information.';
-        } else if (error.response?.status >= 500) {
-          errorMessage = language === 'ar'
-            ? 'خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.'
-            : 'Server error. Please try again later.';
         }
       }
 
@@ -420,7 +311,7 @@ export const OrderPage: React.FC = () => {
           )}
 
           {/* Cover Letter Form */}
-          {serviceType === 'cover-letter' && (
+          {serviceType === SERVICE_TYPES.COVER_LETTER && (
             <div className={`rounded-2xl p-6 mb-8 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
               <h3 className="text-lg font-semibold mb-6 flex items-center">
                 <Briefcase className="w-5 h-5 mr-2" />

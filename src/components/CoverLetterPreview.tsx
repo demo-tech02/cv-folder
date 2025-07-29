@@ -4,177 +4,19 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Header } from './Header';
 import { Footer } from './Footer';
-import { useTheme } from '../hooks/useTheme';
-import { useLanguage } from '../hooks/useLanguage';
+import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Loader2, Download, Eye, ArrowLeft, FileText, AlertCircle, Smartphone, Monitor, ExternalLink } from 'lucide-react';
+import { CoverLetterApiService } from '../apis';
+import { PaymentModal } from './ui/PaymentModal';
+import { isMobileDevice, isIOS, downloadFile, createObjectURL, revokeObjectURL } from '../utils/helpers';
+import { PAYMENT_CONFIG } from '../constants';
 
 interface LocationState {
   session_id: string;
   cover_letter_filename: string;
 }
 
-interface PaymentModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onPaymentSuccess: () => void;
-  amount: number;
-  isDarkMode: boolean;
-  language: string;
-}
-
-const PaymentModal: React.FC<PaymentModalProps> = ({
-  isOpen,
-  onClose,
-  onPaymentSuccess,
-  amount,
-  isDarkMode,
-  language
-}) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardholderName, setCardholderName] = useState('');
-
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return v;
-    }
-  };
-
-  const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4);
-    }
-    return v;
-  };
-
-  const processPayment = async () => {
-    if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
-      toast.error(language === 'ar' ? 'يرجى ملء جميع الحقول' : 'Please fill all fields');
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulate success (in real app, this would be your payment API call)
-      toast.success(language === 'ar' ? 'تم الدفع بنجاح!' : 'Payment successful!');
-      onPaymentSuccess();
-      onClose();
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast.error(language === 'ar' ? 'فشل في الدفع. يرجى المحاولة مرة أخرى' : 'Payment failed. Please try again');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
-      <div className={`relative w-full max-w-md rounded-2xl p-6 shadow-2xl ${
-        isDarkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
-      }`}>
-        <div className="space-y-4">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">
-              {language === 'ar' ? 'الدفع الآمن' : 'Secure Payment'}
-            </h2>
-            <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-              {language === 'ar' ? 'المبلغ:' : 'Amount:'} ${amount}
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <input
-              type="text"
-              placeholder={language === 'ar' ? 'اسم حامل البطاقة' : 'Cardholder Name'}
-              value={cardholderName}
-              onChange={(e) => setCardholderName(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="text"
-              placeholder={language === 'ar' ? 'رقم البطاقة' : 'Card Number'}
-              value={cardNumber}
-              onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-              maxLength={19}
-              className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder={language === 'ar' ? 'تاريخ الانتهاء' : 'MM/YY'}
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
-                maxLength={5}
-                className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="CVV"
-                value={cvv}
-                onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
-                maxLength={4}
-                className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-4 mt-6">
-            <button
-              onClick={onClose}
-              disabled={isProcessing}
-              className={`px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'}`}
-            >
-              {language === 'ar' ? 'إلغاء' : 'Cancel'}
-            </button>
-            <button
-              onClick={processPayment}
-              disabled={isProcessing}
-              className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
-            >
-              {isProcessing ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {language === 'ar' ? 'جاري المعالجة...' : 'Processing...'}
-                </span>
-              ) : (
-                language === 'ar' ? 'دفع' : 'Pay'
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Mobile detection utility
-const isMobileDevice = (): boolean => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-         window.innerWidth < 768;
-};
-
-// iOS detection utility  
-const isIOS = (): boolean => {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent);
-};
 
 export function CoverLetterPreview() {
   const location = useLocation();
@@ -202,33 +44,18 @@ export function CoverLetterPreview() {
       setMobileImageLoading(true);
       const fetchMobileImage = async () => {
         try {
-          const API_BASE_URL = 'https://13393172fc91.ngrok-free.app/images';
-          const response = await axios.post(
-            API_BASE_URL,
-            {
-              session_id: String(state.session_id),
-              filename: state.cover_letter_filename
-            },
-            {
-              headers: {
-                'ngrok-skip-browser-warning': 'true',
-                'Content-Type': 'application/json'
-              },
-              timeout: 30000,
-            }
+          const images = await CoverLetterApiService.getCoverLetterImages(
+            String(state.session_id),
+            state.cover_letter_filename
           );
-          let images: string[] | undefined;
-          if (Array.isArray(response.data)) {
-            images = response.data;
-          } else if (response.data && Array.isArray(response.data.images)) {
-            images = response.data.images;
-          }
-          if (images && images.length > 0) {
+          
+          if (images.length > 0) {
             setMobileImageUrl(images[0]);
           } else {
             setMobileImageUrl(null);
           }
         } catch (error) {
+          console.error('Error fetching mobile image:', error);
           setMobileImageUrl(null);
         } finally {
           setMobileImageLoading(false);
@@ -277,32 +104,14 @@ export function CoverLetterPreview() {
       try {
         setIsLoading(true);
         setError('');
-        
-        const API_BASE_URL = 'https://13393172fc91.ngrok-free.app/download';
-        
-        // Encode the filename to handle special characters
-        const encodedFilename = encodeURIComponent(state.cover_letter_filename);
-        const downloadUrl = `${API_BASE_URL}?session_id=${state.session_id}&filename=${encodedFilename}`;
-        
-        console.log('Attempting to download from:', downloadUrl);
 
-        const response = await axios.get(downloadUrl, {
-          responseType: 'blob',
-          headers: {
-            'Accept': 'application/pdf',
-            'ngrok-skip-browser-warning': 'true'
-          },
-          timeout: 30000,
-        });
-
-        // Check if the response is actually a PDF
-        if (!response.headers['content-type'].includes('application/pdf')) {
-          throw new Error('Server did not return a PDF');
-        }
-
-        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const blob = await CoverLetterApiService.downloadCoverLetter(
+          state.session_id,
+          state.cover_letter_filename
+        );
+        
         setPdfBlob(blob);
-        const url = URL.createObjectURL(blob);
+        const url = createObjectURL(blob);
         
         // For mobile devices, especially iOS, we need to handle PDF viewing differently
         if (isMobile) {
@@ -312,31 +121,25 @@ export function CoverLetterPreview() {
         }
       } catch (error: any) {
         console.error('Error downloading cover letter:', error);
-        
-        // Try to read the error response if it's a blob
-        if (error.response?.data instanceof Blob) {
-          const errorData = await error.response.data.text();
-          console.error('Error response content:', errorData);
-        } else {
-          console.error('Error response:', error.response?.data);
-        }
-        
+
         let errorMessage = language === 'ar' 
           ? 'حدث خطأ في تحميل خطاب التغطية' 
           : 'Error loading cover letter';
         
-        if (error.response?.status === 404) {
-          errorMessage = language === 'ar' 
-            ? 'لم يتم العثور على ملف خطاب التغطية' 
-            : 'Cover letter file not found';
-        } else if (error.response?.status === 422) {
-          errorMessage = language === 'ar' 
-            ? 'بيانات غير صالحة لخطاب التغطية' 
-            : 'Invalid cover letter data';
-        } else if (error.message === 'Server did not return a PDF') {
-          errorMessage = language === 'ar' 
-            ? 'الملف الذي تم استلامه ليس ملف PDF صالحاً' 
-            : 'The received file is not a valid PDF';
+        if (error instanceof Error) {
+          if (error.message.includes('not found')) {
+            errorMessage = language === 'ar' 
+              ? 'لم يتم العثور على ملف خطاب التغطية' 
+              : 'Cover letter file not found';
+          } else if (error.message.includes('invalid')) {
+            errorMessage = language === 'ar' 
+              ? 'بيانات غير صالحة لخطاب التغطية' 
+              : 'Invalid cover letter data';
+          } else if (error.message.includes('PDF')) {
+            errorMessage = language === 'ar' 
+              ? 'الملف الذي تم استلامه ليس ملف PDF صالحاً' 
+              : 'The received file is not a valid PDF';
+          }
         }
 
         setError(errorMessage);
@@ -350,7 +153,7 @@ export function CoverLetterPreview() {
 
     return () => {
       if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl.split('#')[0]);
+        revokeObjectURL(pdfUrl.split('#')[0]);
       }
     };
   }, [state, language, isMobile]);
@@ -362,12 +165,7 @@ export function CoverLetterPreview() {
     }
     // Download PDF for both mobile and desktop
     if (!pdfUrl || !pdfBlob) return;
-    const link = document.createElement('a');
-    link.href = pdfUrl.split('#')[0];
-    link.download = 'cover-letter.pdf';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadFile(pdfUrl, 'cover-letter.pdf');
     toast.success(language === 'ar' ? 'تم تحميل الملف بنجاح' : 'File downloaded successfully');
     setTimeout(() => {
       navigate('/', { replace: true });
@@ -581,7 +379,7 @@ export function CoverLetterPreview() {
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         onPaymentSuccess={handlePaymentSuccess}
-        amount={10}
+        amount={PAYMENT_CONFIG.DEFAULT_AMOUNT}
         isDarkMode={isDarkMode}
         language={typeof language === 'string' ? language : 'ar'}
       />

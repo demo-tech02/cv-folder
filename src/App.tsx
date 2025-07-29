@@ -1,58 +1,44 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { HomePage } from './components/HomePage';
-import { OrderPage } from './components/OrderPage';
-import { PreviewPage } from './components/PreviewPage';
-import { CoverLetterPreview } from './components/CoverLetterPreview';
-import { useTheme } from './hooks/useTheme';
+import { AppRouter } from './routes';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 
-// Theme and Language Context Provider Component
-const ThemeLanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isDarkMode } = useTheme();
-  
-  // Apply theme class to body for additional styling if needed
-  React.useEffect(() => {
-    document.body.className = isDarkMode ? 'dark-theme' : 'light-theme';
-  }, [isDarkMode]);
-  
-  return <>{children}</>;
-};
-
-function App() {
+// Toast Container Component
+const ToastContainerWrapper: React.FC = () => {
   const { isDarkMode } = useTheme();
   
   return (
-    <ThemeLanguageProvider>
-      <Router>
+    <ToastContainer
+      position="top-right"
+      autoClose={5000}
+      hideProgressBar={false}
+      newestOnTop={false}
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+      theme={isDarkMode ? 'dark' : 'light'}
+      toastStyle={{
+        backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+        color: isDarkMode ? '#ffffff' : '#000000',
+      }}
+    />
+  );
+};
+
+function App() {
+  return (
+    <ThemeProvider>
+      <LanguageProvider>
         <div className="App">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/order/:serviceType" element={<OrderPage />} />
-            <Route path="/preview" element={<PreviewPage />} />
-            <Route path="/cover-letter-preview" element={<CoverLetterPreview />} />
-          </Routes>
-          
-          <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme={isDarkMode ? 'dark' : 'light'}
-            toastStyle={{
-              backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-              color: isDarkMode ? '#ffffff' : '#000000',
-            }}
-          />
+          <AppRouter />
+          <ToastContainerWrapper />
         </div>
-      </Router>
-    </ThemeLanguageProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

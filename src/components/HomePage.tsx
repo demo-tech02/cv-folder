@@ -7,8 +7,8 @@ import DatabaseSection from './DatabaseSection';
 import { AdvantagesSection } from './AdvantagesSection';
 import SocialProofSection from './SocialProofSection';
 import { Footer } from './Footer';
-import { useTheme } from '../hooks/useTheme';
-import { useLanguage } from '../hooks/useLanguage';
+import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { content } from '../data/content';
 
 export const HomePage: React.FC = () => {
