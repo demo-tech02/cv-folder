@@ -88,7 +88,4 @@ export interface UploadResponse {
   modern_resume_url: string;
 }
 
-export interface Language {
-  ar: string;
-  en: string;
-}
+export type Language = 'ar' | 'en';

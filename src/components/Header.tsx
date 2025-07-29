@@ -38,13 +38,22 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-8">
           <button
             onClick={toggleLanguage}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 ${
+              isDarkMode 
+                ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700' 
+                : 'bg-gray-100 hover:bg-gray-200 text-black border border-gray-200'
+            }`}
           >
             {language === 'ar' ? 'English' : 'العربية'}
           </button>
           <button
             onClick={toggleDarkMode}
-            className={`p-2 rounded-md transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+            className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+              isDarkMode 
+                ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700' 
+                : 'bg-gray-100 hover:bg-gray-200 text-black border border-gray-200'
+            }`}
+            title={isDarkMode ? (language === 'ar' ? 'تبديل للوضع الفاتح' : 'Switch to Light Mode') : (language === 'ar' ? 'تبديل للوضع الداكن' : 'Switch to Dark Mode')}
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>

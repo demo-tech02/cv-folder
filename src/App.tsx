@@ -8,38 +8,51 @@ import { PreviewPage } from './components/PreviewPage';
 import { CoverLetterPreview } from './components/CoverLetterPreview';
 import { useTheme } from './hooks/useTheme';
 
+// Theme and Language Context Provider Component
+const ThemeLanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isDarkMode } = useTheme();
+  
+  // Apply theme class to body for additional styling if needed
+  React.useEffect(() => {
+    document.body.className = isDarkMode ? 'dark-theme' : 'light-theme';
+  }, [isDarkMode]);
+  
+  return <>{children}</>;
+};
 
 function App() {
-  
   const { isDarkMode } = useTheme();
+  
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/order/:serviceType" element={<OrderPage />} />
-          <Route path="/preview" element={<PreviewPage />} />
-          <Route path="/cover-letter-preview" element={<CoverLetterPreview />} />
-        </Routes>
-        
-        <ToastContainer
-          position="top-right"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme={isDarkMode ? 'dark' : 'light'}
-          toastStyle={{
-            backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
-            color: isDarkMode ? '#ffffff' : '#000000',
-          }}
-        />
-      </div>
-    </Router>
+    <ThemeLanguageProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/order/:serviceType" element={<OrderPage />} />
+            <Route path="/preview" element={<PreviewPage />} />
+            <Route path="/cover-letter-preview" element={<CoverLetterPreview />} />
+          </Routes>
+          
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme={isDarkMode ? 'dark' : 'light'}
+            toastStyle={{
+              backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+              color: isDarkMode ? '#ffffff' : '#000000',
+            }}
+          />
+        </div>
+      </Router>
+    </ThemeLanguageProvider>
   );
 }
 
